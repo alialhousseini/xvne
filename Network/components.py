@@ -1,9 +1,11 @@
 """The main components of any network, such as nodes and links."""
 
+# TODO V2.0: MAKE NODES AND LINKS CAPACITIES DYNAMIC FOR REAL-TIME CHANGE
 
 #######################################################################################################
 ###################################### Basic Network Components #######################################
 #######################################################################################################
+
 
 class Node:
     """A node in the network."""
@@ -65,11 +67,15 @@ class Node:
             return 0
 
     def __str__(self) -> str:
-        return str(self.id)
+        return "Node(id=" + str(self.id) + ", cap=" + str(self.capacity) + ")"
 
     def remove_link(self, link: 'Link') -> None:
         self.links.remove(link)
         self.connected_nodes.remove(link.get_other_node(self))
+
+    def clear_links(self) -> None:
+        self.links.clear()
+        self.connected_nodes.clear()
 
 
 class Link:
@@ -99,7 +105,7 @@ class Link:
         self.available_bandwidth -= amount
 
     def __str__(self) -> str:
-        return str(self.id)
+        return "Link(id=" + str(self.id) + ", bw=" + str(self.bandwidth) + ", Node1=" + str(self.nodes[0]) + ", Node2=" + str(self.nodes[1]) + ")"
 
     def get_node(self, criterion: str = None) -> 'Node':
         """get one of the extremeties according to a criterion"""
@@ -149,7 +155,7 @@ class VirtualNode(Node):
         self.substrate_node: 'SubstrateNode' = None
 
     def __str__(self) -> str:
-        return str(self.id)
+        return super().__str__()
 
     def allocate(self, substrate_node: 'SubstrateNode') -> None:
         """Allocate the virtual node on a substrate node"""
@@ -187,7 +193,7 @@ class VirtualLink(Link):
         return len(self.substrate_path) if self.substrate_path is not None else 0
 
     def __str__(self) -> str:
-        return str(self.id)
+        return super().__str__()
 
     def allocate(self, substrate_path: list['SubstrateLink'], criterion: str) -> None:
         if not self.is_allocated:
@@ -269,4 +275,22 @@ class SubstrateLink(Link):
     def __str__(self) -> str:
         return super().__str__()
 
-    # allocate / release
+    def allocate(self, virtual_link: 'VirtualLink') -> None:
+        # Additional check
+        if self.compare_bandwidth(virtual_link.bandwidth) >= 0 and virtual_link.available_bandwidth != 0:
+            if not self.is_occupied:
+                self.is_occupied = True
+            assert virtual_link not in self.embedded_virtual_links, "The virtual link is already allocated"
+            self.embedded_virtual_links.append(virtual_link)
+            self.decrease_bandwidth(virtual_link.bandwidth)
+            # The controller will handle the virtual link allocation
+
+    def release(self, virtual_link: 'VirtualLink') -> None:
+        if virtual_link in self.embedded_virtual_links:
+            # remove the virtual link from the list of embedded virtual links
+            self.embedded_virtual_links.remove(virtual_link)
+            # add the bandwidth back
+            self.add_bandwidth(virtual_link.bandwidth)
+            if len(self.embedded_virtual_links) == 0:
+                self.is_occupied = False
+            # The controller will handle the virtual link release
