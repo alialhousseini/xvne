@@ -1,5 +1,5 @@
 from Networks import VirtualNetworkRequest
-from Networks.components import VirtualNode, VirtualLink, SubstrateNode, SubstrateLink, Path
+from Networks.components import VirtualNode, VirtualLink, SubstrateNode, SubstrateLink
 
 
 class Event:
@@ -49,22 +49,25 @@ class FailureEvent(Event):
         if type == 'Node_Failure':
             vnode: VirtualNode = kwargs['vnode']
             snode: SubstrateNode = kwargs['snode']
-            # A failure on embedding a node (cap constraint)
+            reason: str = kwargs['reason']
+            # reason is either 'cap' constraint violation OR 'already_emb' constraint violation (another node from the same vnr is there)
             self.event_log: str = f"Node Failure at time {self.time}, VNR(id:{self.virtual_network_request.id}), \
-                VNode(id:{vnode.id}, cap:{vnode.available_capacity}), SNode(id:{snode.id}, cap:{snode.available_capacity})\n"
+                VNode(id:{vnode.id}, cap:{vnode.available_capacity}), SNode(id:{snode.id}, cap:{snode.available_capacity}), Reason={reason}\n"
 
         elif type == 'Link_Failure':
             vlink: VirtualLink = kwargs['vlink']
-            spath: Path = kwargs['spath']
+            spath: list['SubstrateLink'] = kwargs['spath']
+            link_ids: list = [link.id for link in spath]
+            reason = kwargs['reason']
             self.event_log = f"Link Failure at time {self.time}, VNR (id:{self.virtual_network_request.id}, \
-                VLink(id:{vlink.id}, cap:{vlink.available_bandwidth}), SPath(id:{spath.id}))\n"
+                VLink(id:{vlink.id}, cap:{vlink.available_bandwidth}), SPath({link_ids}, reason={reason}))\n"
 
         else:
             raise ValueError(
                 "The type of event must be 'Node_Failure' or 'Link_Failure'")
 
 
-class Success_Event(Event):
+class SuccessEvent(Event):
     def __init__(self, type: str, time: int, virtual_network_request: VirtualNetworkRequest, **kwargs):
         super().__init__(type, time, virtual_network_request, **kwargs)
         if type == 'Node_Success':
@@ -75,9 +78,10 @@ class Success_Event(Event):
                 VNode(id:{vnode.id}, cap:{vnode.available_capacity}), SNode(id:{snode.id}, cap:{snode.available_capacity})\n"
         elif type == 'Link_Success':
             vlink: VirtualLink = kwargs['vlink']
-            spath: Path = kwargs['spath']
+            spath: list['SubstrateLink'] = kwargs['spath']
+            link_ids: list = [link.id for link in spath]
             self.event_log = f"Link Successful embedding at time {self.time}, VNR (id:{self.virtual_network_request.id}, \
-                VLink(id:{vlink.id}, cap:{vlink.available_bandwidth}), SPath(id:{spath.id}))\n"
+                VLink(id:{vlink.id}, cap:{vlink.available_bandwidth}), SPath({link_ids}))\n"
         else:
             raise ValueError(
                 "The type of event must be 'Node_Success' or 'Link_Success'")

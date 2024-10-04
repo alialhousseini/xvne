@@ -29,8 +29,11 @@ def main():
             5, 10), arrival_time=random.randint(0, 6))
         vnrs.append(vnr)
 
-    c = Controller(sn, vnrs)
-    c.recorder.show_events()
+    # c = Controller(sn, vnrs)
+    # c.recorder.show_events()
+    sn.draw_graph()
+    print(sn.get_list_paths(1, 3))
+    print(sn.get_list_paths(1, 5))
 
 
 if __name__ == '__main__':

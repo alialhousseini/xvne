@@ -78,8 +78,13 @@ class Node:
         self.links.clear()
         self.connected_nodes.clear()
 
-    # def __eq__(self, value: object) -> bool:
-    #     return self.id == value.id
+    def __eq__(self, other):
+        if isinstance(other, Node):
+            return self.id == other.id
+        return False
+
+    def __hash__(self):
+        return hash(self.id)
 
 
 class NodePair:
@@ -176,39 +181,48 @@ class Link:
         self.available_bandwidth += amount
 
 
-class Path:
-    _next_id = 0
+# Tested and works, while not required for this version.
+# class Path:
+#     _next_id = 0
 
-    def __init__(self, substrate_links: list['SubstrateLink']) -> None:
-        self.id = Path.get_next_id()
-        self.substrate_links = substrate_links
-        self.virtual_links = []  # each element is a virtual link
+#     def __init__(self, substrate_links: list['SubstrateLink']) -> None:
+#         self.id = Path.get_next_id()
+#         self.substrate_links = substrate_links
+#         self.virtual_links = []  # each element is a virtual link
 
-    def __len__(self) -> int:
-        return len(self.substrate_links)
+#     def __len__(self) -> int:
+#         return len(self.substrate_links)
 
-    @classmethod
-    def get_next_id(cls) -> int:
-        if not hasattr(cls, '_next_id'):
-            cls._next_id = 0
-        cls._next_id += 1
-        return cls._next_id
+#     @classmethod
+#     def get_next_id(cls) -> int:
+#         if not hasattr(cls, '_next_id'):
+#             cls._next_id = 0
+#         cls._next_id += 1
+#         return cls._next_id
 
-    def embed(self, virtual_link: 'VirtualLink') -> None:
-        self.virtual_links.append(virtual_link)
+#     def embed(self, virtual_link: 'VirtualLink') -> None:
+#         self.virtual_links.append(virtual_link)
+#         for slink in self.substrate_links:
+#             slink.allocate(virtual_link)
 
-    def list_of_nodes(self) -> list:
-        nodes = []
-        for link in self.substrate_links:
-            nodes.append(link.nodes[0].id)
-            nodes.append(link.nodes[1].id)
-        return list(set(nodes))
+#     def __str__(self) -> str:
+#         return "Path(id=" + str(self.id) + ", slinks=" + str(self.substrate_links) + ", vlinks=" + str(self.virtual_links) + ")"
 
-    def release(self, vlink: 'VirtualLink') -> None:
-        for slink in self.substrate_links:
-            slink.embedded_virtual_links.remove(vlink)
-            slink.release(vlink)
-        self.virtual_links.remove(vlink)
+#     def list_of_nodes(self) -> list:
+#         nodes = []
+#         for link in self.substrate_links:
+#             nodes.append(link.nodes[0].id)
+#             nodes.append(link.nodes[1].id)
+#         return list(set(nodes))
+
+#     def release(self, vlink: 'VirtualLink') -> None:
+#         if vlink not in self.virtual_links:
+#             raise "The virtual link is not in the path"
+#         else:
+#             for slink in self.substrate_links:
+#                 # slink.embedded_virtual_links.remove(vlink) - redundant
+#                 slink.release(vlink)
+#             self.virtual_links.remove(vlink)
 
 
 #######################################################################################################
@@ -259,7 +273,7 @@ class VirtualLink(Link):
         # PS: A virtual link can be embedded into a path (of several links) in the SN
         # if the link is allocated on a substrate link or not
         self.is_allocated: bool = False
-        self.substrate_path: Path = None
+        self.substrate_path: list['SubstrateLink'] = []
 
     def get_path_length(self) -> int:
         return len(self.substrate_path)
@@ -267,18 +281,19 @@ class VirtualLink(Link):
     def __str__(self) -> str:
         return super().__str__()
 
-    def allocate(self, substrate_path: Path, criterion: str = 'sum') -> None:
+    def allocate(self, substrate_path: list['SubstrateLink'], criterion: str = 'min') -> None:
         if not self.is_allocated and substrate_path is None:
             self.substrate_path = substrate_path
             self.is_allocated = True
+            # TODO: V2.0 - MIN for demand and SUM for bandwidth
             if criterion == 'min':
                 minimum_substrate_bandwidth = min(
-                    substrate_path.substrate_links, key=lambda x: x.available_bandwidth).available_bandwidth
+                    substrate_path, key=lambda x: x.available_bandwidth).available_bandwidth
                 self.decrease_bandwidth(minimum_substrate_bandwidth)
                 assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
             else:  # 'sum'
                 sum_substrate_bandwidth = sum(
-                    [x.available_bandwidth for x in substrate_path.substrate_links])
+                    [x.available_bandwidth for x in substrate_path])
                 self.decrease_bandwidth(sum_substrate_bandwidth)
                 assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
             # For both cases above, the controller will handle the substrate path allocation
@@ -289,7 +304,7 @@ class VirtualLink(Link):
         if self.is_allocated:
             # The controller will handle the substrate path release
             self.reset_bandwidth()
-            self.substrate_path = None
+            self.substrate_path = []
             self.is_allocated = False
         else:
             raise "The virtual link is not allocated"
@@ -318,7 +333,6 @@ class SubstrateNode(Node):
         if self.compare_capacity(virtual_node.capacity) >= 0 and virtual_node.available_capacity != 0:
             if not self.is_occupied:
                 self.is_occupied = True
-            assert virtual_node not in self.allocated_nodes, "The virtual node is already allocated"
             self.allocated_nodes.append(virtual_node)
             self.deduct_capacity(virtual_node.capacity)
             # The controller will handle the virtual node allocation

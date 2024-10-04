@@ -15,34 +15,13 @@ class VirtualNetworkRequest:
         self.virtual_network = virtual_network
         self.lifetime = lifetime
         self.arrival_time = arrival_time
-        # flag to indicate if the request is embedded (as a whole)
-        # turned on when all (nodes+links) are successfully embedded
-        self.is_embedded = False
         # flag to indicate if at least one node is embedded (important for step function - to embed links)
         self.at_least_one = False
         # for FUTURE USE (v2) - weighted VNR according to a formula
         self.weight: float = 0.0
         self.nodes_embedded_components: dict = {}  # key = vnode id, value = snode id
-        self.links_embedded_components: dict = {}  # key = link id, value = spath id
-
-    # def allocate_vnode(self, virtual_node: VirtualNode, substrate_node: SubstrateNode) -> Event:
-    #     if not virtual_node.is_allocated:
-    #         if virtual_node.available_capacity <= substrate_node.available_capacity:
-    #             # Can be embedded (vnode is not yet embedded and cap constraint is respected)
-    #             virtual_node.allocate(substrate_node)
-    #             # Record the embedding (by ids)
-    #             self.embedded_components[virtual_node.id] = substrate_node.id
-    #             return Event('successful_node_embedding',
-    #                          virtual_network_request=self,
-    #                          time=time(),
-    #                          virtual_node=virtual_node,
-    #                          substrate_node=substrate_node)
-    #         else:
-    #             # Cannot be embedded (cap constraint is not respected)
-    #             return Event('Fail', sub_type='node_cap', time=time(), virtual_network_request=self, snode=substrate_node, vnode=virtual_node)
-    #     else:
-    #         # Record a non logical error
-    #         return Event('Error', time=time(), virtual_network_request=self)
+        # key = link id, value = list of vlinks_id
+        self.links_embedded_components: dict = {}
 
     @classmethod
     def get_next_id(cls) -> int:
@@ -62,3 +41,12 @@ class VirtualNetworkRequest:
 
     def __str__(self) -> str:
         return f"VirtualNetworkRequest(virtual_network={self.virtual_network}, lifetime={self.lifetime}, arrival_time={self.arrival_time})"
+
+    def is_all_embedded(self) -> bool:
+        for node in self.virtual_network.virtual_nodes:
+            if not node.is_allocated():
+                return False
+        for link in self.virtual_network.virtual_links:
+            if not link.is_allocated():
+                return False
+        return True

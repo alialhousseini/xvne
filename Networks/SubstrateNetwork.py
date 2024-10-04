@@ -4,7 +4,7 @@ import json
 import random
 from matplotlib import pyplot as plt
 import networkx as nx
-from .components import SubstrateNode, SubstrateLink
+from .components import SubstrateNode, SubstrateLink, NodePair
 
 #######################################################################################################
 ###################################### Substrate Network ##############################################
@@ -26,6 +26,21 @@ class SubstrateNetwork:
             cls._next_id = 0
         cls._next_id += 1
         return cls._next_id
+
+    def get_list_paths(self, node1: int, node2: int) -> list[list[int]]:
+        '''Get the list of paths (a list where each element is a list of node IDs) in the substrate network from node1 to node2'''
+        g = self.get_graph()
+        pair = NodePair(self.get_substrate_node(node1),
+                        self.get_substrate_node(node2))
+        try:
+            paths = list(nx.all_simple_paths(
+                g, source=pair[0].id, target=pair[1].id))
+        except nx.NetworkXNoPath:
+            # Return an empty list if no path exists
+            return []
+        # Paths are sorted according to their length
+        paths.sort(key=len)
+        return paths
 
     def add_substrate_node(self, substrate_node: SubstrateNode) -> None:
         assert substrate_node not in self.substrate_nodes, "The substrate node is already in the substrate network"
@@ -149,75 +164,12 @@ class SubstrateNetwork:
                 return link
         return None
 
-    # def allocate_virtual_node(self, vnode: VirtualNode, snode: SubstrateNode, vnr: VirtualNetworkRequest) -> Event:
-    #     # fast check
-    #     if vnode.is_allocated:
-    #         raise Exception("The virtual node is already allocated")
-    #     if vnode.available_capacity <= snode.available_capacity:
-    #         # Can be embedded (vnode is not yet embedded and cap constraint is respected)
-    #         # Deduct the capacity of vnode, and turn the flag on
-    #         vnode.allocate(snode)
-    #         # Deduct the capacity of snode, and add vnode to the list of hosted nodes by snode
-    #         snode.allocate(vnode)
-
-    #         # Update the embedded virtual nodes dictionary
-    #         key = self.embedded_virtual_nodes.get(snode.id, None)
-    #         if key is not None:
-    #             # already other nodes are embedded on this node (from different VNR)
-    #             self.embedded_virtual_nodes[snode.id].append(vnode.id)
-    #         else:
-    #             # first embedded node
-    #             self.embedded_virtual_nodes[snode.id] = []
-    #             self.embedded_virtual_nodes[snode.id].append(vnode.id)
-
-    #         # save in the VNR that a node has been embedded
-    #         vnr.nodes_embedded_components[vnode.id] = snode.id
-    #         if vnr.at_least_one == False:
-    #             vnr.at_least_one = True
-
-    #         return Event('successful_node_embedding',
-    #                      virtual_network_request=vnr,
-    #                      time=time(),
-    #                      virtual_node=vnode,
-    #                      substrate_node=snode)
-    #     else:
-    #         # Can't be embedded (cap constraint is not respected)
-    #         return Event('Fail',
-    #                      virtual_network_request=vnr,
-    #                      time=time(),
-    #                      virtual_node=vnode,
-    #                      substrate_node=snode)
-
-    # def release_vnr(self, vnr: VirtualNetworkRequest) -> Event:
-    #     '''This function releases a complete VNR'''
-    #     # TODO: v2.0 make the release of specific node/link only is possible
-
-    #     # NODE RELEASING PHASE
-    #     for k, v in vnr.nodes_embedded_components.items():  # k = node id, v = substrate node id
-    #         vnode = vnr.get_virtual_network().get_virtual_node(k)
-    #         snode = self.get_substrate_node(v)
-    #         vnode.release()
-    #         snode.release()
-    #         if len(self.embedded_virtual_nodes[snode.id]) != 1:
-    #             self.embedded_virtual_nodes[snode.id].remove(vnode.id)
-    #         else:
-    #             self.embedded_virtual_nodes[snode.id] = []
-    #     vnr.nodes_embedded_components = {}
-    #     vnr.at_least_one = False
-    #     vnr.is_embedded = False
-
-    #     # LINKS RELEASING PHASE
-
-    #     return Event('Dep', time=time(), virtual_network_request=vnr)
-
-    # def release_vlinks(self, vnr: VirtualNetworkRequest) -> None:
-    #     ''' Use in release_vnr to release all links'''
-    #     for k, v in vnr.links_embedded_components.items():  # v is an id of a path
-    #         vlink = vnr.get_virtual_network().get_virtual_link(k)
-    #         spath = self.spaths[v]
-    #         vlink.release()
-    #         spath.release(vlink)
-    #         self.embedded_virtual_links[spath.id].remove(vlink.id)
+    def get_substrate_link_by_nodePair(self, node1_id: int, node2_id: int) -> SubstrateLink:
+        pair = NodePair(node1_id, node2_id)
+        for link in self.substrate_links:
+            if pair == link.nodes:
+                return link
+        return None
 
 
 def test_substrate_network():
