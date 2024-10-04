@@ -1,0 +1,6 @@
+Arrival at time 5, VNR (id:1)
+Arrival at time 1, VNR (id:2)
+Arrival at time 5, VNR (id:3)
+Departure at time: 10, VNR (id:1)
+Departure at time: 11, VNR (id:2)
+Departure at time: 15, VNR (id:3)

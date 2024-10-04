@@ -2,56 +2,64 @@
     "id": 1,
     "substrate_nodes": [
         {
+            "id": 1,
+            "capacity": 10,
+            "available_capacity": 10,
+            "is_embedded": false,
+            "allocated_virtual_nodes": []
+        },
+        {
             "id": 2,
-            "capacity": 8,
-            "available_capacity": 8,
+            "capacity": 15,
+            "available_capacity": 15,
             "is_embedded": false,
             "allocated_virtual_nodes": []
         },
         {
             "id": 3,
-            "capacity": 1,
-            "available_capacity": 1,
+            "capacity": 20,
+            "available_capacity": 20,
             "is_embedded": false,
             "allocated_virtual_nodes": []
         },
         {
             "id": 4,
-            "capacity": 3,
-            "available_capacity": 3,
-            "is_embedded": false,
-            "allocated_virtual_nodes": []
-        },
-        {
-            "id": 5,
-            "capacity": 3,
-            "available_capacity": 3,
-            "is_embedded": false,
-            "allocated_virtual_nodes": []
-        },
-        {
-            "id": 6,
-            "capacity": 4,
-            "available_capacity": 4,
-            "is_embedded": false,
-            "allocated_virtual_nodes": []
-        },
-        {
-            "id": 7,
-            "capacity": 10,
-            "available_capacity": 10,
+            "capacity": 25,
+            "available_capacity": 25,
             "is_embedded": false,
             "allocated_virtual_nodes": []
         }
     ],
     "substrate_links": [
         {
-            "id": 2,
-            "bandwidth": 9,
-            "available_bandwidth": 9,
+            "id": 1,
+            "bandwidth": 10,
+            "available_bandwidth": 10,
             "nodes": [
-                "Node(id=4, cap=3)",
-                "Node(id=6, cap=4)"
+                "Node(id=1, cap=10)",
+                "Node(id=2, cap=15)"
+            ],
+            "is_embedded": false,
+            "embedded_virtual_links": []
+        },
+        {
+            "id": 2,
+            "bandwidth": 15,
+            "available_bandwidth": 15,
+            "nodes": [
+                "Node(id=2, cap=15)",
+                "Node(id=3, cap=20)"
+            ],
+            "is_embedded": false,
+            "embedded_virtual_links": []
+        },
+        {
+            "id": 3,
+            "bandwidth": 20,
+            "available_bandwidth": 20,
+            "nodes": [
+                "Node(id=3, cap=20)",
+                "Node(id=4, cap=25)"
             ],
             "is_embedded": false,
             "embedded_virtual_links": []

@@ -1,6 +1,6 @@
 ''' Record Events in a file '''
-from Network import VirtualNetworkRequest, SubstrateNetwork, SubstrateNode, SubstrateLink, VirtualNode, VirtualLink
-
+from Networks import VirtualNetworkRequest
+from utils import Event
 # Arrival, Departure, Failure (capacity constraint/ non-complete allocation), Release, Allocation
 # 1. Arrival: when a VNR arrives
 # 2. Departure: when a VNR departs - requires a release
@@ -9,85 +9,35 @@ from Network import VirtualNetworkRequest, SubstrateNetwork, SubstrateNode, Subs
 # 5. Allocation: when a VNR is allocated - requires a rollback
 
 
-class Event:
-    def __init__(self, type: str, time: int, **kwargs):
-        ''' Generate a list of possible kwargs for the event 
-        Args:
-            type: the type of event
-            time: the time of the event
-            **kwargs: the arguments of the event
-
-        Kwargs:
-            virtual_network_request: the virtual network request
-            substrate_node: the substrate node
-            substrate_link: the substrate link
-            virtual_node: the virtual node
-            virtual_link: the virtual link
-        '''
-        self.type: str = type
-        self.time: int = time
-
-        if type == 'Arr':
-            # the arrival VNR
-            self.virtual_network_request: VirtualNetworkRequest = kwargs[
-                'virtual_network_request']
-            self.event_detail = {'vnr_id': self.virtual_network_request.id,
-                                 'arrival_time': self.virtual_network_request.arrival_time}
-
-        elif type == 'Dep':
-            # the departure VNR
-            self.virtual_network_request = kwargs['virtual_network_request']
-            self.actual_departure_time = kwargs['actual_departure_time']
-            self.event_detail = {'vnr_id': self.virtual_network_request.id,
-                                 'expected_departure_time': self.virtual_network_request.arrival_time + self.virtual_network_request.lifetime,
-                                 'actual_departure_time': self.actual_departure_time}
-            # This event requires a release, a controller will handle the release
-
-        elif type == 'Fail':
-            # A fail could be due to a capacity constraint
-            # Or a non-complete allocation (e.g. a link is not possible to be allocated)
-            self.virtual_network_request = kwargs['virtual_network_request']
-            # the sub_type of the failure: 'Cap' or 'Link'
-            self.sub_type = kwargs['sub_type']
-            if self.sub_type == 'cap':
-                self.sn = kwargs['sn']
-                self.event_detail = {'vnr_id': self.virtual_network_request.id,
-                                     'failure_type': 'cap',
-                                     'sn': self.sn.id}
-            elif self.sub_type == 'link':
-                self.event_detail = {'vnr_id': self.virtual_network_request.id,
-                                     'failure_type': 'Link'}
-            else:
-                raise ValueError('sub_type must be "cap" or "link"')
-
-        # A release event could be added if it requires a considerable amount of time
-
-        elif type == 'node_embedding':
-            self.vn = kwargs['vn']
-            self.sn = kwargs['sn']
-            self.event_detail = {'vn_id': self.vn.id,
-                                 'sn_id': self.sn.id}
-
-        elif type == 'link_embedding':
-            self.vl = kwargs['vl']
-            self.vp = kwargs['vp']  # the substrate path
-            self.event_detail = {'vl_id': self.vl.id,
-                                 'vp': self.vp}
-
-    def log_event(self, filename: str) -> None:
-        with open(filename, 'a') as file:
-            file.write(str(self) + '\n')
-
-
 class Recorder:
-    def __init__(self, filename: str):
-        self.filename = filename
-        self.events: list[Event] = []
-        self.event_count = 0
+    def __init__(self, filename: str, log_level: str = 'AUTO') -> None:
+        self.filename: str = filename
+        self.arr_dep_events: list[Event] = []
+        self.failure_events: list[FailureEvent] = []
+        self.success_events: list[SuccessEvent] = []
+        self.all_events: list = []
+        
+        self.all_events_count: int = 0
+        self.arr_dep_events_count: int = 0
+        self.failure_events_count: int = 0
+        self.success_events_count: int = 0
+        
+        # By default: AUTO, the logging will be automatic
+        self.log_level: str = log_level
 
-    def add_event(self, event: Event) -> None:
-        self.events.append(event)
-        self.event_count += 1
+    def add_arr_dep_event(self, event: Event) -> None:
+        self.arr_dep_events.append(event)
+        self.arr_dep_events_count += 1
+        self.all_events_count += 1
+        if self.log_level == 'AUTO':
+            self.record_event(event)
 
     def record_event(self, event: Event) -> None:
         event.log_event(self.filename)
+
+    def remove_event(self, event: Event) -> None:
+        self.events.remove(event)
+
+    def show_events(self) -> None:
+        for event in self.events:
+            print(event)

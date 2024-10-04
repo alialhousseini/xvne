@@ -1,16 +1,14 @@
-from .components import Link, Node, SubstrateLink, SubstrateNode, VirtualLink, VirtualNode
-from .VirtualNetwork import VirtualNetwork
+from .components import SubstrateLink, SubstrateNode, VirtualLink, VirtualNode
 from .SubstrateNetwork import SubstrateNetwork
+from .VirtualNetwork import VirtualNetwork
 from .VirtualNetworkRequest import VirtualNetworkRequest
 
 __all__ = [
-    "Link",
-    "Node",
     "SubstrateLink",
     "SubstrateNode",
     "VirtualLink",
     "VirtualNode",
-    "VirtualNetwork",
     "SubstrateNetwork",
+    "VirtualNetwork",
     "VirtualNetworkRequest",
 ]

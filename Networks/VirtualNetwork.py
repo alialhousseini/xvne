@@ -1,6 +1,5 @@
 """A script that defines the virtual network class"""
-
-from components import VirtualNode, VirtualLink
+from .components import VirtualNode, VirtualLink
 import networkx as nx
 from matplotlib import pyplot as plt
 import random
@@ -32,24 +31,43 @@ class VirtualNetwork:
 
     def add_virtual_link(self, virtual_link: VirtualLink) -> None:
         assert virtual_link not in self.virtual_links, "The virtual link is already in the virtual network"
+        # We cannot add a slink on top of another
+        for link in self.virtual_links:
+            if link.nodes[0] in virtual_link.nodes and link.nodes[1] in virtual_link.nodes:
+                return None
+        # Iterate through the Vlink two extremities
         for node in virtual_link.nodes:
+            # check whether any of the nodes is already in the virtual network
             if node not in self.virtual_nodes:
+                # if not, add it
                 self.add_virtual_node(node)
+            # If the link is not already in the node info, add it
+            if virtual_link not in node.links:
+                node.add_link(virtual_link)
+        # Add the virtual link
         self.virtual_links.append(virtual_link)
 
     def remove_virtual_node(self, virtual_node: VirtualNode) -> None:
         assert virtual_node in self.virtual_nodes, "The virtual node is not in the virtual network"
         # Removing a virtual node will remove by consequence all its virtual links
+        # get the list of all links connected to the virtual node
         temp_node_links = [
-            link for link in self.virtual_links if virtual_node in link.nodes]
+            link for link in self.virtual_links if virtual_node in link.nodes.to_list()]
+        # remove the links from the virtual network
         for link in temp_node_links:
             self.virtual_links.remove(link)
-        virtual_node.clear_links()
+        # virtual_node.clear_links() - redundant
         self.virtual_nodes.remove(virtual_node)
 
     def remove_virtual_link(self, virtual_link: VirtualLink) -> None:
         assert virtual_link in self.virtual_links, "The virtual link is not in the virtual network"
-        self.virtual_links.remove(virtual_link)
+        # Removing a virtual link will remove by consequence the node that become disjoint (VNs are not partitioned) - i.e. degree 1
+        # Iterate through the two end-parts of the link
+        for node in virtual_link.nodes.to_list():
+            # If any of them has a degree of 1, remove it
+            if len(node.links) == 1:
+                self.remove_virtual_node(node)
+            self.virtual_links.remove(virtual_link)
 
     def __str__(self) -> str:
         nodes = [str(node) for node in self.virtual_nodes]
@@ -86,7 +104,8 @@ class VirtualNetwork:
         nx.draw_networkx_labels(g, pos, labels=node_labels, font_size=6)
 
         # Add edge labels (e.g., bandwidth)
-        edge_labels = {(link.nodes[0].id, link.nodes[1].id)                       : f"bw={link.bandwidth}" for link in self.virtual_links}
+        edge_labels = {(link.nodes[0].id, link.nodes[1].id)
+                        : f"bw={link.bandwidth}" for link in self.virtual_links}
         nx.draw_networkx_edge_labels(
             g, pos, edge_labels=edge_labels, font_size=6)
 
@@ -111,9 +130,9 @@ def test_virtual_network():
     virtual_network = VirtualNetwork()
 
     # add a set of virtual nodes
-    num_virtual_nodes = random.randint(5, 7)
+    num_virtual_nodes = 3
     virtual_nodes = [VirtualNode(random.randint(1, 10))
-                     for n in range(num_virtual_nodes)]
+                     for _ in range(num_virtual_nodes)]
 
     # add the virtual nodes to the virtual network
     for virtual_node in virtual_nodes:

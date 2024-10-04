@@ -17,9 +17,10 @@ class Node:
         self.id: int = Node._get_next_id()  # incremental id
         self.capacity: int = capacity  # the capacity of the node
         self.available_capacity: int = capacity  # the available capacity of the node
-        self.links: list = []  # the links connected to the node in the network
+        # the links connected to the node in the network
+        self.links: list[Link] = []
         # the nodes connected by a "direct link"
-        self.connected_nodes: list = []
+        self.connected_nodes: list[Node] = []
 
     @classmethod
     def _get_next_id(cls) -> int:
@@ -46,13 +47,13 @@ class Node:
 
     def get_link(self, criterion: str = None) -> 'Link':
         """get one of the links according to a criterion"""
-        if criterion is "more_resources":
+        if criterion == "more_resources":
             max(self.links, key=lambda x: x.available_bandwidth)
-        elif criterion is "less_resources":
+        elif criterion == "less_resources":
             min(self.links, key=lambda x: x.available_bandwidth)
-        elif criterion is "more_original_resources":
+        elif criterion == "more_original_resources":
             max(self.links, key=lambda x: x.bandwidth)
-        elif criterion is "less_original_resources":
+        elif criterion == "less_original_resources":
             min(self.links, key=lambda x: x.bandwidth)
         else:
             raise "criterion is not specified"
@@ -77,6 +78,40 @@ class Node:
         self.links.clear()
         self.connected_nodes.clear()
 
+    # def __eq__(self, value: object) -> bool:
+    #     return self.id == value.id
+
+
+class NodePair:
+    def __init__(self, node1: 'Node', node2: 'Node') -> None:
+        self.first, self.second = sorted((node1.id, node2.id))
+        self.node1 = node1 if node1.id == self.first else node2
+        self.node2 = node2 if node2.id == self.second else node1
+
+    def __repr__(self):
+        return f"({self.first}, {self.second})"
+
+    def __eq__(self, other):
+        return (self.first, self.second) == (other.first, other.second)
+
+    def __hash__(self):
+        return hash((self.first, self.second))
+
+    def __getitem__(self, id: int) -> Node:
+        if id == 0:
+            return self.node1
+        elif id == 1:
+            return self.node2
+        else:
+            return None
+
+    def __iter__(self):
+        return iter([self.node1, self.node2])
+
+    def to_list(self):
+        return [self.first, self.second]
+    # Add this method to make the class iterable
+
 
 class Link:
     """A link in the network."""
@@ -89,7 +124,8 @@ class Link:
         self.id: int = Link._get_next_id()  # incremental id
         self.bandwidth: int = bandwidth  # the bandwidth of the link
         self.available_bandwidth: int = bandwidth  # the available bandwidth of the link
-        self.nodes: list = nodes  # the nodes connected to the link
+        # the nodes connected to the link
+        self.nodes: NodePair = NodePair(nodes[0], nodes[1])
         # store link's info in nodes
         self.nodes[0].add_link(self)
         self.nodes[1].add_link(self)
@@ -109,13 +145,13 @@ class Link:
 
     def get_node(self, criterion: str = None) -> 'Node':
         """get one of the extremeties according to a criterion"""
-        if criterion is "more_resources":
+        if criterion == "more_resources":
             return self.nodes[0] if self.nodes[0].available_capacity > self.nodes[1].available_capacity else self.nodes[1]
-        elif criterion is "less_resources":
+        elif criterion == "less_resources":
             return self.nodes[0] if self.nodes[0].available_capacity < self.nodes[1].available_capacity else self.nodes[1]
-        elif criterion is "more_original_resources":
+        elif criterion == "more_original_resources":
             return self.nodes[0] if self.nodes[0].capacity > self.nodes[1].capacity else self.nodes[1]
-        elif criterion is "less_original_resources":
+        elif criterion == "less_original_resources":
             return self.nodes[0] if self.nodes[0].capacity < self.nodes[1].capacity else self.nodes[1]
         else:
             raise "criterion is not specified"
@@ -138,6 +174,42 @@ class Link:
     def add_bandwidth(self, amount: int) -> None:
         assert self.available_bandwidth + amount <= self.bandwidth, "Not enough bandwidth"
         self.available_bandwidth += amount
+
+
+class Path:
+    _next_id = 0
+
+    def __init__(self, substrate_links: list['SubstrateLink']) -> None:
+        self.id = Path.get_next_id()
+        self.substrate_links = substrate_links
+        self.virtual_links = []  # each element is a virtual link
+
+    def __len__(self) -> int:
+        return len(self.substrate_links)
+
+    @classmethod
+    def get_next_id(cls) -> int:
+        if not hasattr(cls, '_next_id'):
+            cls._next_id = 0
+        cls._next_id += 1
+        return cls._next_id
+
+    def embed(self, virtual_link: 'VirtualLink') -> None:
+        self.virtual_links.append(virtual_link)
+
+    def list_of_nodes(self) -> list:
+        nodes = []
+        for link in self.substrate_links:
+            nodes.append(link.nodes[0].id)
+            nodes.append(link.nodes[1].id)
+        return list(set(nodes))
+
+    def release(self, vlink: 'VirtualLink') -> None:
+        for slink in self.substrate_links:
+            slink.embedded_virtual_links.remove(vlink)
+            slink.release(vlink)
+        self.virtual_links.remove(vlink)
+
 
 #######################################################################################################
 #################################### Virtual Network Components #######################################
@@ -187,26 +259,26 @@ class VirtualLink(Link):
         # PS: A virtual link can be embedded into a path (of several links) in the SN
         # if the link is allocated on a substrate link or not
         self.is_allocated: bool = False
-        self.substrate_path: list['SubstrateLink'] = None
+        self.substrate_path: Path = None
 
     def get_path_length(self) -> int:
-        return len(self.substrate_path) if self.substrate_path is not None else 0
+        return len(self.substrate_path)
 
     def __str__(self) -> str:
         return super().__str__()
 
-    def allocate(self, substrate_path: list['SubstrateLink'], criterion: str) -> None:
-        if not self.is_allocated:
+    def allocate(self, substrate_path: Path, criterion: str = 'sum') -> None:
+        if not self.is_allocated and substrate_path is None:
             self.substrate_path = substrate_path
             self.is_allocated = True
             if criterion == 'min':
                 minimum_substrate_bandwidth = min(
-                    substrate_path, key=lambda x: x.available_bandwidth).available_bandwidth
+                    substrate_path.substrate_links, key=lambda x: x.available_bandwidth).available_bandwidth
                 self.decrease_bandwidth(minimum_substrate_bandwidth)
                 assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
             else:  # 'sum'
                 sum_substrate_bandwidth = sum(
-                    [x.available_bandwidth for x in substrate_path])
+                    [x.available_bandwidth for x in substrate_path.substrate_links])
                 self.decrease_bandwidth(sum_substrate_bandwidth)
                 assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
             # For both cases above, the controller will handle the substrate path allocation
@@ -223,7 +295,7 @@ class VirtualLink(Link):
             raise "The virtual link is not allocated"
 
 #######################################################################################################
-#################################### Virtual Network Components #######################################
+#################################### Substrate Network Components #######################################
 #######################################################################################################
 
 
