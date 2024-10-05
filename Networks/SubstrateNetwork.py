@@ -138,14 +138,13 @@ class SubstrateNetwork:
         nx.draw(g, pos, with_labels=False, node_color="lightblue",
                 node_size=800, font_size=10)
 
-        # Draw the node labels (ID and capacity)
+        # Draw the node labels (ID and avl_capacity)
         node_labels = {
-            node.id: f"ID: {node.id}, cap: {node.capacity}" for node in self.substrate_nodes}
+            node.id: f"ID: {node.id}, cap: {node.available_capacity}" for node in self.substrate_nodes}
         nx.draw_networkx_labels(g, pos, labels=node_labels, font_size=6)
 
         # Add edge labels (e.g., bandwidth)
-        edge_labels = {(link.nodes[0].id, link.nodes[1].id)
-                        : f"bw={link.bandwidth}" for link in self.substrate_links}
+        edge_labels = {(link.nodes[0].id, link.nodes[1].id): f"bw={link.available_bandwidth}" for link in self.substrate_links}
         nx.draw_networkx_edge_labels(
             g, pos, edge_labels=edge_labels, font_size=6)
 
@@ -216,5 +215,6 @@ def test_substrate_network():
 
 
 if __name__ == '__main__':
-    sn = test_substrate_network()
-    sn.to_json('sn.json')
+    # sn = test_substrate_network()
+    # sn.to_json('sn.json')
+    pass

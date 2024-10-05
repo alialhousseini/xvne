@@ -13,9 +13,11 @@
         {
             "id": 2,
             "capacity": 9,
-            "available_capacity": 9,
-            "is_embedded": false,
-            "allocated_virtual_nodes": []
+            "available_capacity": 2,
+            "is_embedded": true,
+            "allocated_virtual_nodes": [
+                "Node(id=6, cap=7)"
+            ]
         },
         {
             "id": 3,
@@ -27,22 +29,26 @@
         {
             "id": 4,
             "capacity": 9,
-            "available_capacity": 9,
-            "is_embedded": false,
-            "allocated_virtual_nodes": []
+            "available_capacity": 5,
+            "is_embedded": true,
+            "allocated_virtual_nodes": [
+                "Node(id=7, cap=4)"
+            ]
         }
     ],
     "substrate_links": [
         {
             "id": 1,
             "bandwidth": 4,
-            "available_bandwidth": 4,
+            "available_bandwidth": 3,
             "nodes": [
                 "Node(id=1, cap=7)",
                 "Node(id=2, cap=9)"
             ],
-            "is_embedded": false,
-            "embedded_virtual_links": []
+            "is_embedded": true,
+            "embedded_virtual_links": [
+                "Link(id=6, bw=1, Node1=Node(id=5, cap=3), Node2=Node(id=6, cap=7))"
+            ]
         },
         {
             "id": 2,
@@ -69,13 +75,15 @@
         {
             "id": 4,
             "bandwidth": 5,
-            "available_bandwidth": 5,
+            "available_bandwidth": 0,
             "nodes": [
                 "Node(id=2, cap=9)",
                 "Node(id=4, cap=9)"
             ],
-            "is_embedded": false,
-            "embedded_virtual_links": []
+            "is_embedded": true,
+            "embedded_virtual_links": [
+                "Link(id=7, bw=5, Node1=Node(id=6, cap=7), Node2=Node(id=7, cap=4))"
+            ]
         },
         {
             "id": 5,

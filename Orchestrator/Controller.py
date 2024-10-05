@@ -1,7 +1,9 @@
 '''The GodFather of the scenario'''
 from Networks import SubstrateNetwork, VirtualNetworkRequest, VirtualNode, SubstrateNode, VirtualLink, SubstrateLink
-from utils import Arr_Dep_Event, FailureEvent, SuccessEvent
+from utils import Arr_Dep_Event, FailureEvent, SuccessEvent, ReleaseEvent
 from .Recorder import Recorder
+from .Evaluator import Evaluator
+from .SimulationTime import SimTime
 
 
 class Controller:
@@ -12,16 +14,19 @@ class Controller:
     '''
 
     def __init__(self, substrate_network: SubstrateNetwork, vnrs: list[VirtualNetworkRequest]) -> None:
+        self.time = SimTime()
         self.substrate_network: SubstrateNetwork = substrate_network
         self.vnrs: list[VirtualNetworkRequest] = vnrs
         # A dict of VNRs, key = VNR id, value = VNR
         # used as a fixed references (for rollback or release)
         self.vnr_dict: dict = {vnr.id: vnr for vnr in vnrs}
-        self.vnrs_embedded: int = 0
+        # self.vnrs_embedded: int = 0 - moved to evaluator in v1.3
         # supposing current_time_at_beginning = 0
         # Initilize a recorder to record events
         # The recorder has a list of events to record all events
         self.recorder: Recorder = Recorder('Controller.txt')
+        self.evaluator: Evaluator = Evaluator(
+            self.vnrs, self.substrate_network)
         self.create_events()  # create arrival and departure events in an ordered list
 
     def create_events(self) -> None:
@@ -43,6 +48,8 @@ class Controller:
             and it tries to embed VNode in that SNode.
             All records are stored in the corresponding VNR, Vnode, and SNode.
         '''
+        # simtime increment
+        self.time.tick()
         # Fast check: If the given vnode is already allocated somewhere
         if vnode.is_allocated:
             raise ValueError('VNode is already allocated')
@@ -54,14 +61,6 @@ class Controller:
                 break
         if vnr is None:
             raise ValueError('VNode is not in any VNR')
-
-        # Alternative solution:
-        # for vnr in self.vnrs:
-        #     if vnr.virtual_network.get_virtual_node(vnode.id) is not None:
-        #         corresponding_vnr = vnr
-        #         break
-        # if corresponding_vnr is None:
-        #     raise ValueError('VNode is not in any VNR')
 
         # Check if any other vnode of this VNR is already embedded in the same snode
         # a set of common nodes (if any)
@@ -92,7 +91,7 @@ class Controller:
                                 temp_events.append(event)
 
                     if any(event.type == 'Link_Failure' for event in temp_events):
-                        return FailureEvent('Link_Failure', time=vnr.arrival_time, vnr=corresponding_vnr, vlink=link, spath=None, reason='Failure during link embedding')
+                        return FailureEvent('Link_Failure', time=self.time.get_time(), vnr=corresponding_vnr, vlink=link, spath=None, reason='Failure during link embedding')
 
                     # Rollback will be called outside of this function
 
@@ -102,15 +101,15 @@ class Controller:
 
                 if corresponding_vnr.is_all_embedded():
                     # The VNR is completely embedded
-                    self.vnrs_embedded += 1
+                    self.evaluator.add_embedded_vnr(corresponding_vnr)
 
-                return SuccessEvent('Node_Success', time=vnr.arrival_time, vnr=corresponding_vnr, snode=snode, vnode=vnode)
+                return SuccessEvent('Node_Success', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode)
 
             else:
                 # Embedding is not possible (cap constraint is not satisfied)
-                return FailureEvent('Node_Failure', time=vnr.arrival_time, vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='cap')
+                return FailureEvent('Node_Failure', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='cap')
 
-        return FailureEvent('Node_Failure', time=vnr.arrival_time, vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='already_emb')
+        return FailureEvent('Node_Failure', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='already_emb')
 
     def allocate_link(self, vlink: VirtualLink, vnr: VirtualNetworkRequest) -> FailureEvent | SuccessEvent:
         ''' A function used inside allocate_node, used for allocating links, if any.
@@ -123,6 +122,8 @@ class Controller:
             If the embedding is not possible, it returns a FailureEvent (that informs the Env to rollback changes), otherwise it returns a SuccessEvent
             Note: The embedding follows the default method: (min)
         '''
+        # TODO: Time change
+        self.time.tick()
         # Retrieve corresponding SNodes (id) for the link's nodes.
         snode1_id: int = vnr.nodes_embedded_components[vlink.nodes[0].id]
         snode2_id: int = vnr.nodes_embedded_components[vlink.nodes[1].id]
@@ -133,7 +134,7 @@ class Controller:
         if len(paths) == 0:
             # No path exists between these two nodes
             # This means that we have a virtual link, where their nodes are not connected by a path in the subsrate network
-            return FailureEvent('Link_Failure', time=vnr.arrival_time, vnr=vnr, vlink=vlink, spath=None, reason='no path found')
+            return FailureEvent('Link_Failure', time=self.time.get_time(), vnr=vnr, vlink=vlink, spath=None, reason='no path found')
 
         # Fast check: If the link is already embedded in any path
         if vlink.is_allocated:
@@ -171,7 +172,37 @@ class Controller:
                 break
 
         if flag:
-            return SuccessEvent('Link_Success', time=vnr.arrival_time, vnr=vnr, vlink=vlink, spath=temp_path)
+            return SuccessEvent('Link_Success', time=self.time.get_time(), vnr=vnr, vlink=vlink, spath=temp_path)
 
         else:
-            return FailureEvent('Link_Failure', time=vnr.arrival_time, vnr=vnr, vlink=vlink,spath=None, reason='All paths are not feasible')
+            return FailureEvent('Link_Failure', time=self.time.get_time(), vnr=vnr, vlink=vlink, spath=None, reason='All paths are not feasible')
+
+    def rollback(self, vnr: VirtualNetworkRequest, reason: str) -> ReleaseEvent:
+        ''' Rollback function: Responsible for releasing a VNR and its components'''
+        # To release a VNR we follow a down-top approach, i.e we start by releasing nodes and links.
+        # Later, we ensure the removal of VNR's data from the substrate network
+        # Finally we remove the VNR from the list of VNRs (and all other records related)
+
+        # TODO: Time change
+        self.time.tick()
+
+        # Iterate through the dictionary of nodes embedded in the VNR
+        for vnode_id, snode_id in vnr.nodes_embedded_components.items():
+            # Release the vnode from snode
+            self.substrate_network.get_substrate_node(snode_id).release(
+                vnr.virtual_network.get_virtual_node(vnode_id))
+
+        # Iterate through the dictionary of links embedded in the VNRs
+        for vlink_id, slinks_id in vnr.links_embedded_components.items():
+            for slink_id in slinks_id:
+                # Release the vlink from slink
+                self.substrate_network.get_substrate_link(slink_id).release(
+                    vnr.virtual_network.get_virtual_link(vlink_id))
+
+        # Clear embedding info in the VNR, release connections from vnodes and vlinks
+        vnr.release()
+        vnr.nodes_embedded_components.clear()
+        vnr.links_embedded_components.clear()
+
+        return ReleaseEvent('Release', time=self.time.get_time(), vnr=vnr, reason=reason)
+

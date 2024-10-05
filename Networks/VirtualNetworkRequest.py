@@ -50,3 +50,11 @@ class VirtualNetworkRequest:
             if not link.is_allocated:
                 return False
         return True
+
+    def release(self) -> None:
+        for node in self.virtual_network.virtual_nodes:
+            if node.is_allocated:
+                node.release()
+        for link in self.virtual_network.virtual_links:
+            if link.is_allocated:
+                link.release()

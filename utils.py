@@ -34,7 +34,7 @@ class Arr_Dep_Event(Event):
         elif type == 'Dep':
             # the departure VNR
             self.event_log: str = f"Departure at time: {self.time}, VNR (id:{self.vnr.id})\n"
-            # This event requires a release, the controller will handle the release
+            # This event requires a release, the controller will handle the release (a release event will be generated)
 
         else:
             raise ValueError("The type of event must be 'Arr' or 'Dep'")
@@ -51,14 +51,14 @@ class FailureEvent(Event):
             snode: SubstrateNode = kwargs['snode']
             reason: str = kwargs['reason']
             # reason is either 'cap' constraint violation OR 'already_emb' constraint violation (another node from the same vnr is there)
-            self.event_log: str = f"Node Failure at time {self.time}, VNR(id:{self.vnr.id}), VNode(id:{vnode.id}, cap:{vnode.available_capacity}), SNode(id:{snode.id}, avl_cap:{snode.available_capacity}, cap:{snode.capacity}), Reason={reason}\n"
+            self.event_log: str = f"Node Failure at time {self.time}, VNR(id:{self.vnr.id}), VNode(id:{vnode.id}, avl_cap:{vnode.available_capacity}, cap:{vnode.capacity}), SNode(id:{snode.id}, avl_cap:{snode.available_capacity}, cap:{snode.capacity}), Reason:'{reason}'\n"
 
         elif type == 'Link_Failure':
             vlink: VirtualLink = kwargs['vlink']
             spath: list['SubstrateLink'] = kwargs['spath']
             reason: str = kwargs['reason']
             if spath is None:
-                self.event_log = f"Link Failure at time {self.time}, VNR(id:{self.vnr.id}), VLink(id:{vlink.id}, avl_bw:{vlink.available_bandwidth}, bw:{vlink.bandwidth}), reason:'{reason}'\n"
+                self.event_log = f"Link Failure at time {self.time}, VNR(id:{self.vnr.id}), VLink(id:{vlink.id}, avl_bw:{vlink.available_bandwidth}, bw:{vlink.bandwidth}), Reason:'{reason}'\n"
             else:
                 links_info = "["
                 for i, path in enumerate(spath):
@@ -80,7 +80,7 @@ class SuccessEvent(Event):
             vnode: VirtualNode = kwargs['vnode']
             snode: SubstrateNode = kwargs['snode']
             # A success on embedding a node (cap constraint)
-            self.event_log: str = f"Node Successful embedding at time {self.time}, VNR(id:{self.vnr.id}), VNode(id:{vnode.id}, cap:{vnode.available_capacity}), SNode(id:{snode.id}, avl_cap:{snode.available_capacity}, cap:{snode.capacity})\n"
+            self.event_log: str = f"Node Successful embedding at time {self.time}, VNR(id:{self.vnr.id}), VNode(id:{vnode.id}, avl_cap:{vnode.available_capacity}, cap:{vnode.capacity}), SNode(id:{snode.id}, avl_cap:{snode.available_capacity}, cap:{snode.capacity})\n"
         elif type == 'Link_Success':
             vlink: VirtualLink = kwargs['vlink']
             spath: list['SubstrateLink'] = kwargs['spath']
@@ -94,3 +94,15 @@ class SuccessEvent(Event):
         else:
             raise ValueError(
                 "The type of event must be 'Node_Success' or 'Link_Success'")
+
+
+class ReleaseEvent(Event):
+    def __init__(self, type: str, time: int, vnr: VirtualNetworkRequest, **kwargs):
+        super().__init__(type, time, vnr, **kwargs)
+        if type == 'Release':
+            # Reason of release is: Either a departure Event or Impossible embedding
+            reason: str = kwargs['reason']
+
+            self.event_log: str = f"Release at time {self.time}, VNR(id:{self.vnr.id}), Reason:'{reason}'\n"
+        else:
+            raise ValueError("The type of event must be 'Release'")
