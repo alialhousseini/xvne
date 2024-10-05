@@ -165,7 +165,9 @@ class SubstrateNetwork:
         return None
 
     def get_substrate_link_by_nodePair(self, node1_id: int, node2_id: int) -> SubstrateLink:
-        pair = NodePair(node1_id, node2_id)
+        node1 = self.get_substrate_node(node1_id)
+        node2 = self.get_substrate_node(node2_id)
+        pair = NodePair(node1, node2)
         for link in self.substrate_links:
             if pair == link.nodes:
                 return link

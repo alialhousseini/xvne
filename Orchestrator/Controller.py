@@ -11,7 +11,7 @@ class Controller:
         It manages the failure of VNRs
     '''
 
-    def __init__(self, substrate_network: SubstrateNetwork, vnrs: list) -> None:
+    def __init__(self, substrate_network: SubstrateNetwork, vnrs: list[VirtualNetworkRequest]) -> None:
         self.substrate_network: SubstrateNetwork = substrate_network
         self.vnrs: list[VirtualNetworkRequest] = vnrs
         # A dict of VNRs, key = VNR id, value = VNR
@@ -26,10 +26,10 @@ class Controller:
 
     def create_events(self) -> None:
         for vnr in self.vnrs:
-            self.recorder.add_arr_dep_event(
+            self.recorder.add_event(
                 Arr_Dep_Event('Arr', vnr.arrival_time, vnr))
         for vnr in self.vnrs:
-            self.recorder.add_arr_dep_event(
+            self.recorder.add_event(
                 Arr_Dep_Event('Dep', vnr.arrival_time + vnr.lifetime, vnr))
         self.recorder.arr_dep_events.sort(key=lambda x: x.time)
 
@@ -49,10 +49,10 @@ class Controller:
 
         # Find corresponding VNR, where the VNode is
         for vnr in self.vnrs:
-            if vnode.id in vnr.nodes_embedded_components.keys():
+            if vnr.virtual_network.get_virtual_node(vnode.id) is not None:
                 corresponding_vnr = vnr
                 break
-        else:
+        if vnr is None:
             raise ValueError('VNode is not in any VNR')
 
         # Alternative solution:
@@ -68,7 +68,7 @@ class Controller:
         is_snode_occupied_by_another_vnode = snode.id in corresponding_vnr.nodes_embedded_components.values()
         if not snode.is_occupied and not is_snode_occupied_by_another_vnode:
             # No common nodes, we can start embedding safely
-            if vnode.available_capacity - snode.available_capacity >= 0:
+            if snode.available_capacity - vnode.available_capacity >= 0:
                 # Embedding is possible (cap constraint is satisfied)
                 vnode.allocate(snode)
                 snode.allocate(vnode)
@@ -86,6 +86,7 @@ class Controller:
                         if link.nodes[0].id in corresponding_vnr.nodes_embedded_components.keys() and link.nodes[1].id in corresponding_vnr.nodes_embedded_components.keys():
                             # Iterate through links saved for the just allocated vnode
                             event = self.allocate_link(link, corresponding_vnr)
+                            print(event.event_log)
                             if event is not None:  # Additional Redundant check
                                 self.recorder.add_event(event)
                                 temp_events.append(event)
@@ -158,6 +159,7 @@ class Controller:
             # Check if the link is possible to embed
             minimum_band: int = min(
                 temp_path, key=lambda x: x.available_bandwidth).available_bandwidth
+
             if minimum_band - vlink.available_bandwidth >= 0:
                 # It is possible to embed!
                 vlink.allocate(temp_path)
@@ -172,4 +174,4 @@ class Controller:
             return SuccessEvent('Link_Success', time=vnr.arrival_time, vnr=vnr, vlink=vlink, spath=temp_path)
 
         else:
-            return FailureEvent('Link_Failure', time=vnr.arrival_time, vnr=vnr, vlink=vlink, reason='All paths are not feasible')
+            return FailureEvent('Link_Failure', time=vnr.arrival_time, vnr=vnr, vlink=vlink,spath=None, reason='All paths are not feasible')

@@ -44,9 +44,9 @@ class VirtualNetworkRequest:
 
     def is_all_embedded(self) -> bool:
         for node in self.virtual_network.virtual_nodes:
-            if not node.is_allocated():
+            if not node.is_allocated:
                 return False
         for link in self.virtual_network.virtual_links:
-            if not link.is_allocated():
+            if not link.is_allocated:
                 return False
         return True

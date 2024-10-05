@@ -30,6 +30,7 @@ class Node:
         return cls._next_id
 
     def deduct_capacity(self, amount: int) -> None:
+        assert self.available_capacity >= amount, "Not enough available capacity"
         self.available_capacity -= amount
 
     def reset_capacity(self) -> None:
@@ -58,14 +59,6 @@ class Node:
         else:
             raise "criterion is not specified"
         return None
-
-    def compare_capacity(self, node: 'Node') -> int:
-        if self.capacity > node.capacity:
-            return 1
-        elif self.capacity < node.capacity:
-            return -1
-        else:
-            return 0
 
     def __str__(self) -> str:
         return "Node(id=" + str(self.id) + ", cap=" + str(self.capacity) + ")"
@@ -164,14 +157,6 @@ class Link:
 
     def get_other_node(self, node: 'Node') -> 'Node':
         return self.nodes[0] if self.nodes[0] is not node else self.nodes[1]
-
-    def compare_bandwidth(self, link: 'Link') -> int:
-        if self.bandwidth > link.bandwidth:
-            return 1
-        elif self.bandwidth < link.bandwidth:
-            return -1
-        else:
-            return 0
 
     def reset_bandwidth(self) -> None:
         self.available_bandwidth = self.bandwidth
@@ -282,20 +267,20 @@ class VirtualLink(Link):
         return super().__str__()
 
     def allocate(self, substrate_path: list['SubstrateLink'], criterion: str = 'min') -> None:
-        if not self.is_allocated and substrate_path is None:
+        if not self.is_allocated:  # and substrate_path is None - redundant
             self.substrate_path = substrate_path
             self.is_allocated = True
             # TODO: V2.0 - MIN for demand and SUM for bandwidth
             if criterion == 'min':
                 minimum_substrate_bandwidth = min(
                     substrate_path, key=lambda x: x.available_bandwidth).available_bandwidth
-                self.decrease_bandwidth(minimum_substrate_bandwidth)
-                assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
+                self.decrease_bandwidth(self.bandwidth)
+
             else:  # 'sum'
                 sum_substrate_bandwidth = sum(
                     [x.available_bandwidth for x in substrate_path])
-                self.decrease_bandwidth(sum_substrate_bandwidth)
-                assert self.available_bandwidth == 0, "The bandwidth is not fully allocated"
+                self.decrease_bandwidth(self.bandwidth)
+
             # For both cases above, the controller will handle the substrate path allocation
         else:
             raise "The virtual link is already allocated, release it before allocating"
@@ -330,7 +315,7 @@ class SubstrateNode(Node):
 
     def allocate(self, virtual_node: 'VirtualNode') -> None:
         # Additional check
-        if self.compare_capacity(virtual_node.capacity) >= 0 and virtual_node.available_capacity != 0:
+        if self.available_capacity - virtual_node.capacity >= 0:
             if not self.is_occupied:
                 self.is_occupied = True
             self.allocated_nodes.append(virtual_node)
@@ -363,7 +348,7 @@ class SubstrateLink(Link):
 
     def allocate(self, virtual_link: 'VirtualLink') -> None:
         # Additional check
-        if self.compare_bandwidth(virtual_link.bandwidth) >= 0 and virtual_link.available_bandwidth != 0:
+        if self.available_bandwidth - virtual_link.bandwidth >= 0:
             if not self.is_occupied:
                 self.is_occupied = True
             assert virtual_link not in self.embedded_virtual_links, "The virtual link is already allocated"

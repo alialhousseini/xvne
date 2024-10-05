@@ -6,34 +6,59 @@ import random
 
 
 def main():
-    sn = SubstrateNetwork()
-    snodes = [SubstrateNode(random.randint(1, 10)) for _ in range(6)]
-    slinks = [SubstrateLink(random.sample(snodes, 2),
-                            random.randint(1, 10)) for _ in range(6)]
+    sn: SubstrateNetwork = SubstrateNetwork()
+
+    # snodes
+    snode1 = SubstrateNode(7)
+    snode2 = SubstrateNode(9)
+    snode3 = SubstrateNode(6)
+    snode4 = SubstrateNode(9)
+    snodes = [snode1, snode2, snode3, snode4]
+
+    # slinks
+    slink1 = SubstrateLink([snode1, snode2], 4)
+    slink2 = SubstrateLink([snode2, snode3], 3)
+    slink3 = SubstrateLink([snode3, snode4], 5)
+    slink4 = SubstrateLink([snode2, snode4], 5)
+    slink5 = SubstrateLink([snode4, snode1], 9)
+    slinks = [slink1, slink2, slink3, slink4, slink5]
+
     for snode in snodes:
         sn.add_substrate_node(snode)
     for slink in slinks:
         sn.add_substrate_link(slink)
 
-    vnrs = []
-    for _ in range(3):
-        vnet = VirtualNetwork()
-        vnodes = [VirtualNode(random.randint(1, 10)) for _ in range(3)]
-        vlinks = [VirtualLink(random.sample(vnodes, 2),
-                              random.randint(1, 10)) for _ in range(3)]
-        for vnode in vnodes:
-            vnet.add_virtual_node(vnode)
-        for vlink in vlinks:
-            vnet.add_virtual_link(vlink)
-        vnr = VirtualNetworkRequest(vnet, lifetime=random.randint(
-            5, 10), arrival_time=random.randint(0, 6))
-        vnrs.append(vnr)
+    # vnodes
+    vnode1 = VirtualNode(3)
+    vnode2 = VirtualNode(7)
+    vnode3 = VirtualNode(4)
+    # temp
+    vnodes = [vnode1, vnode2, vnode3]
 
-    # c = Controller(sn, vnrs)
-    # c.recorder.show_events()
-    sn.draw_graph()
-    print(sn.get_list_paths(1, 3))
-    print(sn.get_list_paths(1, 5))
+    # vlinks
+    vlink1 = VirtualLink([vnode1, vnode2], 5)
+    vlink2 = VirtualLink([vnode2, vnode3], 5)
+    vlinks = [vlink1, vlink2]
+
+    vn = VirtualNetwork()
+    for vnode in vnodes:
+        vn.add_virtual_node(vnode)
+    for vlink in vlinks:
+        vn.add_virtual_link(vlink)
+
+    # vnr
+    vnr = VirtualNetworkRequest(vn, arrival_time=1, lifetime=10)
+
+    # controller
+    c = Controller(sn, [vnr])
+    event1 = c.allocate_node(vnode1, snode1)
+    print(event1.event_log)
+    event2 = c.allocate_node(vnode2, snode2)
+    print(event2.event_log)
+
+    print(vnr.nodes_embedded_components)
+
+    # c.substrate_network.to_json('sn.json')
 
 
 if __name__ == '__main__':
