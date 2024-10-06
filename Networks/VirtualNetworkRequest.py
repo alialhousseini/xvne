@@ -22,6 +22,9 @@ class VirtualNetworkRequest:
         self.nodes_embedded_components: dict = {}  # key = vnode id, value = snode id
         # key = link id, value = list of vlinks_id
         self.links_embedded_components: dict = {}
+        # list of vnode ids
+        self.vnodes_id: list = list(
+            map(lambda x: x.id, self.virtual_network.virtual_nodes))
 
     @classmethod
     def get_next_id(cls) -> int:

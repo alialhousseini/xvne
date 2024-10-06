@@ -206,3 +206,15 @@ class Controller:
 
         return ReleaseEvent('Release', time=self.time.get_time(), vnr=vnr, reason=reason)
 
+    def get_max_num_nodes(self) -> int:
+        '''Get the max number of nodes in all VNRs'''
+        return max(self.vnrs, key=lambda x: len(x.virtual_network.virtual_nodes))
+
+    def allocate_vnode(self, vnr: VirtualNetworkRequest, snode_id: int) -> FailureEvent | SuccessEvent:
+        ''' A function that it selects the first not yet "processed" node '''
+        # Iterate through the list of vnode ids
+        for vnode_id in vnr.vnodes_id:
+            if vnode_id not in vnr.nodes_embedded_components.keys():
+                return self.allocate_node(vnr.virtual_network.get_virtual_node(vnode_id), self.substrate_network.get_substrate_node(snode_id))
+
+        return None

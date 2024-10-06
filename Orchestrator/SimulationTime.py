@@ -17,3 +17,7 @@ class SimTime:
 
     def add_time(self, time):
         self.time += time
+
+    def set_time(self, time):
+        if time >= self.time:
+            self.time = time
