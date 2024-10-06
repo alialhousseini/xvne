@@ -10,6 +10,7 @@ class Evaluator:
         self.sn = sn
         self.num_vnrs: int = len(vnrs)
         self.vnrs_embedded: int = 0  # the number of embedded VNRs
+        self.processed_vnrs: int = 0  # the number of processed VNRs
         # the list of ids of embedded VNRs (used to retrieve resources/cost)
         self.vnrs_embedded_list: list[int] = []
         # Record AR within several experiments
@@ -78,3 +79,9 @@ class Evaluator:
             json.dump(info, json_file, indent=4)
 
         print(f"Evaluation results saved to {filename}")
+
+    def is_all_vnrs_embedded(self) -> bool:
+        return self.vnrs_embedded == self.num_vnrs
+
+    def is_all_vnrs_processed(self) -> bool:
+        return self.processed_vnrs == self.num_vnrs

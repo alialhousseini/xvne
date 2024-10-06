@@ -20,17 +20,14 @@ class VNEEnvironment(gym.Env):
         # episode length
         self.episode_length = len(controller.vnrs)
 
-        # current_vnr_index: int
-        self.current_vnr_index = 0
-
         # Define action and observation space
-        N_SUBSTRATE_NODES = len(
+        self.N_SUBSTRATE_NODES = len(
             self.controller.substrate_network.substrate_nodes)
-        MAX_VNR_NODES = self.controller.get_max_num_nodes()
-        N_VNRS = len(self.controller.vnrs)
+        self.MAX_VNR_NODES = self.controller.get_max_num_nodes()
+        self.N_VNRS = len(self.controller.vnrs)
 
         # action space is equal to the number of substrate nodes
-        self.action_space = spaces.Discrete(N_SUBSTRATE_NODES)
+        self.action_space = spaces.Discrete(self.N_SUBSTRATE_NODES)
 
         # observation space:
         # Is a dict:
@@ -46,7 +43,7 @@ class VNEEnvironment(gym.Env):
             'substrate_network': spaces.Box(
                 low=0,
                 high=np.inf,
-                shape=(N_SUBSTRATE_NODES, 3),
+                shape=(self.N_SUBSTRATE_NODES, 3),
                 dtype=np.int32
             ),
 
@@ -55,33 +52,107 @@ class VNEEnvironment(gym.Env):
                 'current_vnr_nodes': spaces.Box(
                     low=0,
                     high=np.inf,
-                    shape=(MAX_VNR_NODES, 3),
+                    shape=(self.MAX_VNR_NODES, 3),
                     dtype=np.int32
                 ),
 
-                'vnr_mask': spaces.MultiBinary(MAX_VNR_NODES),
+                'vnr_mask': spaces.MultiBinary(self.MAX_VNR_NODES),
 
             }),
 
             'vnr_queue': spaces.Dict({
-                'queue_length': spaces.Discrete(N_VNRS),
+                'queue_length': spaces.Discrete(self.N_VNRS),
                 'next_event_type': spaces.Discrete(2)
             })
 
         })
+
+    def reward_shape(self, event: SuccessEvent | FailureEvent, **kwargs) -> float:
+        fully_emb = kwargs.get('fully_emb', False)
+        reward = 0
+        alpha = 0.7
+        vnr = event.vnr
+        vnode = event.vnode
+
+        gamma_r = vnr.virtual_network.get_sum_vnode_resources(
+            vnode) / vnr.get_sum_all_resources()
+
+        if isinstance(event, SuccessEvent):
+
+            try:
+                gamma_a = 1/(len(vnr.vnodes_id) -
+                             len(vnr.nodes_embedded_components.keys()))
+            except ZeroDivisionError:
+                gamma_a = 1
+
+            reward += 100 * ((alpha * gamma_a) +
+                             ((1 - alpha) * gamma_r))
+
+        else:
+
+            try:
+                gamma_a = len(vnr.vnodes_id)/(len(vnr.vnodes_id) -
+                                              len(vnr.nodes_embedded_components.keys()))
+            except ZeroDivisionError:
+                gamma_a = 1
+
+            reward -= 100 * ((alpha * gamma_a) +
+                             ((1 - alpha) * gamma_r))
+
+        if fully_emb:
+            reward += 100 * (1/self.N_VNRS)
+
+        return reward
 
     def step(self, action):
 
         # action:
         snode_id: int = action
 
+        # used to remark whether the episode is over
+        done = False
+
+        # initialize reward
+        reward = 0
+
         # Retrieve the current event
         event = self.controller.recorder.arr_dep_events[0]
-        # Retrieve the corresponding VNR
+        # Retrieve the corresponding VNR from event
         current_vnr = event.vnr
 
-        # Set time to the event's time: Don't worry in next iterations, the function will not change the time to the past
+        # Set time to the event's time: Don't worry for next iterations, the function will not change the time to the past
         self.controller.time.set_time(event.time)
+
+        # Iterate through departure events and release VNRs
+        while event.type == 'Dep':
+
+            # Additional Check
+            if len(self.controller.evaluator.processed_vnrs) == 0:
+                raise ValueError(
+                    'Logical Error: A departure event was found but with no VNR processed.'
+                )
+
+            # Release the VNR
+            release_event = self.controller.rollback(current_vnr, 'Departed.')
+
+            if release_event is None:
+                raise ValueError(
+                    'Logical Error: Something crazy happened.')
+
+            # Record result
+            self.controller.recorder.add_event(release_event)
+
+            # We remove the current departure event
+            self.controller.recorder.remove_event(event)
+
+            # We check here if there are no more events
+            if len(self.controller.recorder.arr_dep_events) == 0:
+                # No longer events: The episode is over
+                done = True
+                break
+
+            # We get next event
+            event = self.controller.recorder.arr_dep_events[0]
 
         if event.type == 'Arr':
 
@@ -105,40 +176,86 @@ class VNEEnvironment(gym.Env):
                 # Record rollback event
                 self.controller.recorder.add_event(release_event)
 
+                # We skip current VNR
+                self.controller.evaluator.processed_vnrs += 1
+
                 # We remove the current arrival event
                 self.controller.recorder.remove_event(event)
 
                 # Negative Reward
-                reward = -1
-
-                return
+                reward = self.reward_shape(allocation_result)
 
             else:  # IsInstance of SuccessEvent
 
                 # Positive Reward
-                reward = 1
+                reward = self.reward_shape(event)
 
+                # We check if the VNR is fully embedded
                 if current_vnr.is_all_embedded():
                     # We remove the current arrival event
                     self.controller.recorder.remove_event(event)
+
+                    # This VNR is fully embedded
+                    # We mark it as processed
+                    self.controller.evaluator.processed_vnrs += 1
+
                     # We give the agent a bonus for embedding the whole VNR
-                    reward = 10
+                    reward += self.reward_shape(event, fully_emb=True)
 
-                return
+            # Outside if-else block
+            if self.controller.evaluator.is_all_vnrs_processed():
+                # All VNRs are processed
+                if self.controller.evaluator.is_all_vnrs_embedded():
+                    # It deserves a end-of-episode reward - if all VNR have been embedded
+                    reward += 100
 
-        else:  # Event type is 'Dep'
+        # Observation formulation
+        observation = self.extraction_representation()
 
-            # Release the VNR
-            release_event = self.controller.rollback(current_vnr, 'Departed.')
+        # End of experiment return
+        return observation, reward, done, False, {}
 
-            if release_event is None:
-                raise ValueError(
-                    'Logical Error: Something crazy happened.')
+    def extraction_representation(self):
+        state_space = {}
+        try:
+            event = self.controller.recorder.arr_dep_events[0]
+        except IndexError:
+            return state_space
 
-            # Record result
-            self.controller.recorder.add_event(release_event)
+        sn_rep = np.zeros((self.N_SUBSTRATE_NODES, 3), dtype=np.int32)
+        for i in range(self.N_SUBSTRATE_NODES):
+            snode = self.controller.substrate_network.substrate_nodes[i]
+            sn_rep[i, 0] = snode.available_capacity
+            sn_rep[i, 1] = self.controller.substrate_network.get_node_degree(
+                snode)
+            sn_rep[i, 2] = self.controller.substrate_network.get_sum_bws_snode(
+                snode)
+        state_space['substrate_network'] = sn_rep
 
-            return
+        vnr = event.vnr
+
+        vnr_dict = {}
+        vnr_rep = np.zeros((self.MAX_VNR_NODES, 3), dtype=np.int32)
+        vnr_rep.fill(np.nan)
+        for i in range(self.MAX_VNR_NODES):
+            vnode = vnr.virtual_network.virtual_nodes[i]
+            sn_rep[i, 0] = vnode.available_capacity
+            sn_rep[i, 1] = vnr.virtual_network.get_node_degree(vnode)
+            sn_rep[i, 2] = vnr.virtual_network.get_sum_bws_vnodes(vnode)
+        vnr_dict['current_vnr_nodes'] = vnr_rep
+        vnr_dict['vnr_mask'] = np.isnan(vnr_rep[:, 0]).astype(int)
+
+        state_space['current_vnr'] = vnr_dict
+
+        vnr_queue = {}
+        vnr_queue['queue_length'] = self.N_VNRS - \
+            self.controller.evaluator.processed_vnrs
+
+        vnr_queue['next_event_type'] = 0 if event.type == 'Arr' else 1
+
+        state_space['vnr_queue'] = vnr_queue
+
+        return state_space
 
     def reset(self, seed=None, options=None):
         ...

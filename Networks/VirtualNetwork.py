@@ -124,6 +124,17 @@ class VirtualNetwork:
                 return link
         return None
 
+    def get_sum_vnode_resources(self, vnode: VirtualNode) -> int:
+        vn = self.get_virtual_node(vnode.id)
+        return sum([link.bandwidth for link in vn.links]) + vn.capacity
+
+    def get_sum_bws_vnodes(self, vnode: VirtualNode) -> int:
+        vn = self.get_virtual_node(vnode.id)
+        return sum([link.bandwidth for link in vn.links])
+
+    def get_node_degree(self, vnode: VirtualNode) -> int:
+        return len(vnode.links)
+
 
 def test_virtual_network():
     # create a virtual network

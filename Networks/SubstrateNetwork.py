@@ -92,6 +92,16 @@ class SubstrateNetwork:
             "substrate_links": [str(vl) for vl in self.substrate_links]
         }
 
+    def get_sum_bws_snode(self, snode: SubstrateNode) -> int:
+        ''' A function that it sums the available bandwidth of all the links connected to a given substrate node '''
+        sum = 0
+        for slink_id in snode.links:
+            sum += self.get_substrate_link(slink_id).available_bandwidth
+        return sum
+
+    def get_node_degree(self, snode: SubstrateNode) -> int:
+        return len(snode.links)
+
     def to_json(self, filename: str) -> None:
         network_data = {
             "id": self.id,
@@ -144,7 +154,8 @@ class SubstrateNetwork:
         nx.draw_networkx_labels(g, pos, labels=node_labels, font_size=6)
 
         # Add edge labels (e.g., bandwidth)
-        edge_labels = {(link.nodes[0].id, link.nodes[1].id): f"bw={link.available_bandwidth}" for link in self.substrate_links}
+        edge_labels = {(link.nodes[0].id, link.nodes[1].id)
+                        : f"bw={link.available_bandwidth}" for link in self.substrate_links}
         nx.draw_networkx_edge_labels(
             g, pos, edge_labels=edge_labels, font_size=6)
 

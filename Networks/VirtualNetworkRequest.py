@@ -61,3 +61,11 @@ class VirtualNetworkRequest:
         for link in self.virtual_network.virtual_links:
             if link.is_allocated:
                 link.release()
+
+    def get_sum_all_resources(self) -> int:
+        sum = 0
+        for node in self.virtual_network.virtual_nodes:
+            sum += node.capacity
+        for link in self.virtual_network.virtual_links:
+            sum += link.bandwidth
+        return sum

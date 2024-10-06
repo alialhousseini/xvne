@@ -1,6 +1,6 @@
 ''' Record Events in a file '''
 from Networks import VirtualNetworkRequest
-from utils import Arr_Dep_Event, FailureEvent, SuccessEvent, Event
+from utils import Arr_Dep_Event, FailureEvent, SuccessEvent, ReleaseEvent
 # Arrival, Departure, Failure (capacity constraint/ non-complete allocation), Release, Allocation
 # 1. Arrival: when a VNR arrives
 # 2. Departure: when a VNR departs - requires a release
@@ -25,7 +25,7 @@ class Recorder:
         # By default: AUTO, the logging will be automatic
         self.log_level: str = log_level
 
-    def add_event(self, event: SuccessEvent | FailureEvent | Arr_Dep_Event) -> None:
+    def add_event(self, event: SuccessEvent | FailureEvent | Arr_Dep_Event | ReleaseEvent) -> None:
         self.all_events.append(event)
         self.all_events_count += 1
         if event.type == 'Arr' or event.type == 'Dep':
