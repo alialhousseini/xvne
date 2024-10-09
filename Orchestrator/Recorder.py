@@ -15,12 +15,14 @@ class Recorder:
         self.arr_dep_events: list[Arr_Dep_Event] = []
         self.failure_events: list[FailureEvent] = []
         self.success_events: list[SuccessEvent] = []
+        self.release_events: list[ReleaseEvent] = []
         self.all_events: list = []
 
         self.all_events_count: int = 0
         self.arr_dep_events_count: int = 0
         self.failure_events_count: int = 0
         self.success_events_count: int = 0
+        self.release_events_count: int = 0
 
         # By default: AUTO, the logging will be automatic
         self.log_level: str = log_level
@@ -37,6 +39,9 @@ class Recorder:
         elif event.type == 'Node_Success' or event.type == 'Link_Success':
             self.success_events_count += 1
             self.success_events.append(event)
+        elif event.type == 'Release':
+            self.release_events.append(event)
+            self.release_events_count += 1
         else:
             raise ValueError("The type of event is Unkown.")
 

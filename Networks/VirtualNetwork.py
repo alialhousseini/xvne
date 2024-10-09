@@ -10,7 +10,14 @@ import random
 
 
 class VirtualNetwork:
-    """A virtual network"""
+    """
+    A virtual network
+
+    Attributes:
+        id (int): The unique id of the virtual network
+        virtual_nodes (list[VirtualNode]): The list of virtual nodes
+        virtual_links (list[VirtualLink]): The list of virtual links
+    """
     _next_id = 0
 
     def __init__(self) -> None:
@@ -125,14 +132,17 @@ class VirtualNetwork:
         return None
 
     def get_sum_vnode_resources(self, vnode: VirtualNode) -> int:
+        '''Get the sum of resources of a specific VNode (capacity + bandwidth)'''
         vn = self.get_virtual_node(vnode.id)
         return sum([link.bandwidth for link in vn.links]) + vn.capacity
 
     def get_sum_bws_vnodes(self, vnode: VirtualNode) -> int:
+        '''Get the sum of bandwidths of a specific VNode'''
         vn = self.get_virtual_node(vnode.id)
         return sum([link.bandwidth for link in vn.links])
 
     def get_node_degree(self, vnode: VirtualNode) -> int:
+        '''Get the degree of a specific VNode'''
         return len(vnode.links)
 
 

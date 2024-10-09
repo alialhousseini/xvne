@@ -1,8 +1,10 @@
 from Networks import SubstrateNetwork, VirtualNetworkRequest, VirtualNetwork
 from Networks.components import SubstrateLink, SubstrateNode, VirtualLink, VirtualNode
 from Orchestrator import Controller, Recorder
+from Environment import VNEEnvironment
 from utils import Event
 import random
+from stable_baselines3.common import env_checker
 
 
 def main():
@@ -64,7 +66,9 @@ def main():
     # print(event4.event_log)
     # c.substrate_network.to_json('sn.json')
 
-    sn.to_json('sn.json')
+    # sn.to_json('sn.json')
+    env = VNEEnvironment(c)
+    env_checker.check_env(env)
 
 
 if __name__ == '__main__':

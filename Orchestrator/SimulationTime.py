@@ -2,22 +2,28 @@
 
 
 class SimTime:
+    '''
+    A class for simulating time
+    '''
+    current_time = 0
 
-    def __init__(self):
-        self.time = 0
+    @classmethod
+    def set_time(cls, time: int) -> None:
+        if time >= cls.current_time:
+            cls.current_time = time
 
-    def tick(self):
-        self.time += 1
+    @classmethod
+    def get_time(cls) -> int:
+        return cls.current_time
 
-    def get_time(self):
-        return self.time
+    @classmethod
+    def add_time(cls, time: int) -> None:
+        cls.current_time += time
 
-    def reset(self):
-        self.time = 0
+    @classmethod
+    def reset_time(cls) -> None:
+        cls.current_time = 0
 
-    def add_time(self, time):
-        self.time += time
-
-    def set_time(self, time):
-        if time >= self.time:
-            self.time = time
+    @classmethod
+    def tick(cls) -> None:
+        cls.current_time += 1

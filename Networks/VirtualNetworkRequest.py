@@ -4,7 +4,20 @@ from .VirtualNetwork import VirtualNetwork
 
 
 class VirtualNetworkRequest:
-    '''A class for a virtual network request'''
+    '''
+    A class for a virtual network request
+    
+    Attributes:
+        id (int): The unique id of the virtual network request
+        virtual_network (VirtualNetwork): The virtual network
+        lifetime (int): The lifetime of the virtual network request
+        arrival_time (int): The arrival time of the virtual network request
+        at_least_one (bool): Flag to indicate if at least one node is embedded
+        weight (float): For FUTURE USE (v2) - weighted VNR according to a formula
+        nodes_embedded_components (dict): key = vnode id, value = snode id
+        links_embedded_components (dict): key = link id, value = list of vlinks_id
+        vnodes_id (list): list of vnode ids
+    '''
     _next_id = 0
 
     def __init__(self, virtual_network: VirtualNetwork, lifetime: int, arrival_time: int) -> None:

@@ -2,8 +2,9 @@
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-from Orchestrator import Controller
+from Orchestrator import Controller, SimTime
 from utils import FailureEvent, SuccessEvent, ReleaseEvent
+
 # Hopefully: This is all what you need
 
 
@@ -16,9 +17,7 @@ class VNEEnvironment(gym.Env):
 
         # Controller - main component
         self.controller = controller
-
-        # episode length
-        self.episode_length = len(controller.vnrs)
+        self.controller_copy = controller
 
         # Define action and observation space
         self.N_SUBSTRATE_NODES = len(
@@ -121,7 +120,7 @@ class VNEEnvironment(gym.Env):
         current_vnr = event.vnr
 
         # Set time to the event's time: Don't worry for next iterations, the function will not change the time to the past
-        self.controller.time.set_time(event.time)
+        SimTime.set_time(event.time)
 
         # Iterate through departure events and release VNRs
         while event.type == 'Dep':
@@ -235,21 +234,21 @@ class VNEEnvironment(gym.Env):
         vnr = event.vnr
 
         vnr_dict = {}
-        vnr_rep = np.zeros((self.MAX_VNR_NODES, 3), dtype=np.int32)
-        vnr_rep.fill(np.nan)
+        vnr_rep = -1*np.zeros((self.MAX_VNR_NODES, 3), dtype=np.int32)
         for i in range(self.MAX_VNR_NODES):
             vnode = vnr.virtual_network.virtual_nodes[i]
-            sn_rep[i, 0] = vnode.available_capacity
-            sn_rep[i, 1] = vnr.virtual_network.get_node_degree(vnode)
-            sn_rep[i, 2] = vnr.virtual_network.get_sum_bws_vnodes(vnode)
+            vnr_rep[i, 0] = vnode.available_capacity
+            vnr_rep[i, 1] = vnr.virtual_network.get_node_degree(vnode)
+            vnr_rep[i, 2] = vnr.virtual_network.get_sum_bws_vnodes(vnode)
         vnr_dict['current_vnr_nodes'] = vnr_rep
-        vnr_dict['vnr_mask'] = np.isnan(vnr_rep[:, 0]).astype(int)
+        # rows that starts with -1
+        vnr_dict['vnr_mask'] = (vnr_rep[0, :] != -1).astype(np.int32)
 
         state_space['current_vnr'] = vnr_dict
 
         vnr_queue = {}
         vnr_queue['queue_length'] = self.N_VNRS - \
-            self.controller.evaluator.processed_vnrs
+            self.controller.evaluator.processed_vnrs - 1
 
         vnr_queue['next_event_type'] = 0 if event.type == 'Arr' else 1
 
@@ -257,12 +256,23 @@ class VNEEnvironment(gym.Env):
 
         return state_space
 
+    def generate_controller_copy(self):
+        return self.controller_copy
+
+    def generate_random_controller(self):
+        pass
+
     def reset(self, seed=None, options=None):
-        ...
+        self.controller = self.generate_controller_copy()
+        self.N_SUBSTRATE_NODES = len(
+            self.controller.substrate_network.substrate_nodes)
+        self.MAX_VNR_NODES = self.controller.get_max_num_nodes()
+        self.N_VNRS = len(self.controller.vnrs)
+        observation, info = self.extraction_representation(), {}
         return observation, info
 
     def render(self):
-        ...
+        pass
 
     def close(self):
-        ...
+        pass

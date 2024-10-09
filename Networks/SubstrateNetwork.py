@@ -12,7 +12,14 @@ from .components import SubstrateNode, SubstrateLink, NodePair
 
 
 class SubstrateNetwork:
-    """A substrate network"""
+    """
+    A substrate network
+
+    Attributes:
+        substrate_nodes: list of substrate nodes
+        substrate_links: list of substrate links
+
+    """
     _next_id = 0
 
     def __init__(self) -> None:
@@ -96,13 +103,14 @@ class SubstrateNetwork:
         ''' A function that it sums the available bandwidth of all the links connected to a given substrate node '''
         sum = 0
         for slink_id in snode.links:
-            sum += self.get_substrate_link(slink_id).available_bandwidth
+            sum += self.get_substrate_link(slink_id.id).available_bandwidth
         return sum
 
     def get_node_degree(self, snode: SubstrateNode) -> int:
         return len(snode.links)
 
     def to_json(self, filename: str) -> None:
+        '''Saves a json file with all info required'''
         network_data = {
             "id": self.id,
             "substrate_nodes": [
@@ -132,6 +140,7 @@ class SubstrateNetwork:
         print(f"Substrate network saved to {filename}")
 
     def get_graph(self) -> nx.Graph:
+        '''Get the substrate network graph'''
         g = nx.Graph()
         for node in self.substrate_nodes:
             g.add_node(node.id)
@@ -163,18 +172,21 @@ class SubstrateNetwork:
         plt.show()
 
     def get_substrate_node(self, node_id: int) -> SubstrateNode:
+        '''Get the substrate node with the given id'''
         for node in self.substrate_nodes:
             if node.id == node_id:
                 return node
         return None
 
     def get_substrate_link(self, link_id: int) -> SubstrateLink:
+        '''Get the substrate link with the given id'''
         for link in self.substrate_links:
             if link.id == link_id:
                 return link
         return None
 
     def get_substrate_link_by_nodePair(self, node1_id: int, node2_id: int) -> SubstrateLink:
+        '''Get the substrate link with the given node pair'''
         node1 = self.get_substrate_node(node1_id)
         node2 = self.get_substrate_node(node2_id)
         pair = NodePair(node1, node2)

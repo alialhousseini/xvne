@@ -11,10 +11,22 @@ class Controller:
         It controls all required components of the scenario.
         It manages the arrival/departure of VNRs
         It manages the failure of VNRs
+
+    Parameters:
+        substrate_network: SubstrateNetwork
+        vnrs: list[VirtualNetworkRequest]
+
+    Attributes:
+        time: SimTime
+        substrate_network: SubstrateNetwork
+        vnrs: list[VirtualNetworkRequest]
+        vnr_dict: dict
+        recorder: Recorder
+        evaluator: Evaluator
+
     '''
 
     def __init__(self, substrate_network: SubstrateNetwork, vnrs: list[VirtualNetworkRequest]) -> None:
-        self.time = SimTime()
         self.substrate_network: SubstrateNetwork = substrate_network
         self.vnrs: list[VirtualNetworkRequest] = vnrs
         # A dict of VNRs, key = VNR id, value = VNR
@@ -49,7 +61,7 @@ class Controller:
             All records are stored in the corresponding VNR, Vnode, and SNode.
         '''
         # simtime increment
-        self.time.tick()
+        SimTime.tick()
         # Fast check: If the given vnode is already allocated somewhere
         if vnode.is_allocated:
             raise ValueError('VNode is already allocated')
@@ -103,13 +115,13 @@ class Controller:
                     # The VNR is completely embedded
                     self.evaluator.add_embedded_vnr(corresponding_vnr)
 
-                return SuccessEvent('Node_Success', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode)
+                return SuccessEvent('Node_Success', time=SimTime.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode)
 
             else:
                 # Embedding is not possible (cap constraint is not satisfied)
-                return FailureEvent('Node_Failure', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='cap')
+                return FailureEvent('Node_Failure', time=SimTime.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='cap')
 
-        return FailureEvent('Node_Failure', time=self.time.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='already_emb')
+        return FailureEvent('Node_Failure', time=SimTime.get_time(), vnr=corresponding_vnr, snode=snode, vnode=vnode, reason='already_emb')
 
     def allocate_link(self, vlink: VirtualLink, vnr: VirtualNetworkRequest) -> FailureEvent | SuccessEvent:
         ''' A function used inside allocate_node, used for allocating links, if any.
@@ -123,7 +135,7 @@ class Controller:
             Note: The embedding follows the default method: (min)
         '''
         # TODO: Time change
-        self.time.tick()
+        SimTime.tick()
         # Retrieve corresponding SNodes (id) for the link's nodes.
         snode1_id: int = vnr.nodes_embedded_components[vlink.nodes[0].id]
         snode2_id: int = vnr.nodes_embedded_components[vlink.nodes[1].id]
@@ -172,10 +184,10 @@ class Controller:
                 break
 
         if flag:
-            return SuccessEvent('Link_Success', time=self.time.get_time(), vnr=vnr, vlink=vlink, spath=temp_path)
+            return SuccessEvent('Link_Success', time=SimTime.get_time(), vnr=vnr, vlink=vlink, spath=temp_path)
 
         else:
-            return FailureEvent('Link_Failure', time=self.time.get_time(), vnr=vnr, vlink=vlink, spath=None, reason='All paths are not feasible')
+            return FailureEvent('Link_Failure', time=SimTime.get_time(), vnr=vnr, vlink=vlink, spath=None, reason='All paths are not feasible')
 
     def rollback(self, vnr: VirtualNetworkRequest, reason: str) -> ReleaseEvent:
         ''' Rollback function: Responsible for releasing a VNR and its components'''
@@ -184,7 +196,7 @@ class Controller:
         # Finally we remove the VNR from the list of VNRs (and all other records related)
 
         # TODO: Time change
-        self.time.tick()
+        SimTime.tick()
 
         # Iterate through the dictionary of nodes embedded in the VNR
         for vnode_id, snode_id in vnr.nodes_embedded_components.items():
@@ -208,10 +220,10 @@ class Controller:
 
     def get_max_num_nodes(self) -> int:
         '''Get the max number of nodes in all VNRs'''
-        return max(self.vnrs, key=lambda x: len(x.virtual_network.virtual_nodes))
+        return len(max(self.vnrs, key=lambda x: len(x.virtual_network.virtual_nodes)).virtual_network.virtual_nodes)
 
     def allocate_vnode(self, vnr: VirtualNetworkRequest, snode_id: int) -> FailureEvent | SuccessEvent:
-        ''' A function that it selects the first not yet "processed" node '''
+        ''' A function that it selects the first not yet "processed" vnode from a VNR '''
         # Iterate through the list of vnode ids
         for vnode_id in vnr.vnodes_id:
             if vnode_id not in vnr.nodes_embedded_components.keys():

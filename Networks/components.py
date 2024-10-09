@@ -8,7 +8,19 @@
 
 
 class Node:
-    """A node in the network."""
+    """
+    A node in the network.
+
+    Parameters:
+        capacity (int): the capacity of the node
+
+    Attributes:
+        id (int): the id of the node
+        capacity (int): the capacity of the node
+        available_capacity (int): the available capacity of the node
+        links (list[Link]): the links connected to the node in the network
+        connected_nodes (list[Node]): the nodes connected by a "direct link"
+    """
 
     _next_id = 0
 
@@ -30,17 +42,21 @@ class Node:
         return cls._next_id
 
     def deduct_capacity(self, amount: int) -> None:
+        '''Deduct the amount of capacity from the node'''
         assert self.available_capacity >= amount, "Not enough available capacity"
         self.available_capacity -= amount
 
     def reset_capacity(self) -> None:
+        '''Reset the capacity of the node'''
         self.available_capacity = self.capacity
 
     def add_capacity(self, amount: int) -> None:
+        '''Add the amount of capacity to the node'''
         assert self.available_capacity + amount <= self.capacity, "Not enough capacity"
         self.available_capacity += amount
 
     def add_link(self, link: 'Link') -> None:
+        '''Add a link to the node'''
         self.links.append(link)
         # A link has two nodes, one is self and other node
         # We append the other node
@@ -64,23 +80,43 @@ class Node:
         return "Node(id=" + str(self.id) + ", cap=" + str(self.capacity) + ")"
 
     def remove_link(self, link: 'Link') -> None:
+        '''Remove a link from the node'''
         self.links.remove(link)
         self.connected_nodes.remove(link.get_other_node(self))
 
     def clear_links(self) -> None:
+        '''Remove all links from the node'''
         self.links.clear()
         self.connected_nodes.clear()
 
     def __eq__(self, other):
+        '''Compare two nodes by their id'''
         if isinstance(other, Node):
             return self.id == other.id
         return False
 
     def __hash__(self):
+        """Return the hash of the node, which is the hash of its id."""
         return hash(self.id)
 
 
 class NodePair:
+    '''
+    A pair of nodes in the network.
+
+    Parameters:
+        node1 (Node): the first node
+        node2 (Node): the second node
+
+    Attributes:
+        first (int): the id of the first node
+        second (int): the id of the second node
+        node1 (Node): the first node
+        node2 (Node): the second node
+
+    Used for defining a link: link = Link(node1, node2)
+    '''
+
     def __init__(self, node1: 'Node', node2: 'Node') -> None:
         self.first, self.second = sorted((node1.id, node2.id))
         self.node1 = node1 if node1.id == self.first else node2
@@ -106,13 +142,21 @@ class NodePair:
     def __iter__(self):
         return iter([self.node1, self.node2])
 
-    def to_list(self):
-        return [self.first, self.second]
-    # Add this method to make the class iterable
-
 
 class Link:
-    """A link in the network."""
+    """
+    A link in the network.
+
+    Parameters:
+        nodes (list): the nodes connected to the link
+        bandwidth (int): the bandwidth of the link
+
+    Attributes:
+        id (int): the id of the link
+        bandwidth (int): the bandwidth of the link
+        available_bandwidth (int): the available bandwidth of the link
+        nodes (NodePair): the nodes connected to the link
+    """
 
     _next_id = 0
 
@@ -136,6 +180,7 @@ class Link:
         return cls._next_id
 
     def decrease_bandwidth(self, amount: int) -> None:
+        '''Decrease the amount of bandwidth from the link'''
         self.available_bandwidth -= amount
 
     def __str__(self) -> str:
@@ -153,15 +198,17 @@ class Link:
             return self.nodes[0] if self.nodes[0].capacity < self.nodes[1].capacity else self.nodes[1]
         else:
             raise "criterion is not specified"
-        return None
 
     def get_other_node(self, node: 'Node') -> 'Node':
+        '''Get the other node in the link'''
         return self.nodes[0] if self.nodes[0] is not node else self.nodes[1]
 
     def reset_bandwidth(self) -> None:
+        '''Reset the bandwidth of the link'''
         self.available_bandwidth = self.bandwidth
 
     def add_bandwidth(self, amount: int) -> None:
+        '''Add the amount of bandwidth to the link'''
         assert self.available_bandwidth + amount <= self.bandwidth, "Not enough bandwidth"
         self.available_bandwidth += amount
 
@@ -216,7 +263,9 @@ class Link:
 
 
 class VirtualNode(Node):
-    """A virtual node in the network, it inherits the basic Node class"""
+    """
+    A virtual node in the network, it inherits the basic Node class
+    """
 
     def __init__(self, capacity: int) -> None:
         super().__init__(capacity)
@@ -240,6 +289,7 @@ class VirtualNode(Node):
             raise "The virtual node is already allocated, release it before allocating"
 
     def release(self) -> None:
+        '''Release the virtual node from the substrate node'''
         if self.is_allocated:
             # The controller will handle the substrate node release
             self.reset_capacity()
