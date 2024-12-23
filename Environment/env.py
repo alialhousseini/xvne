@@ -158,7 +158,9 @@ class VNEEnvironment(gym.Env):
             # Allocate the node using the given action
             allocation_result = self.controller.allocate_vnode(
                 current_vnr, snode_id)
-
+            print(allocation_result)
+            print(current_vnr)
+            print(snode_id)
             if allocation_result is None:
                 raise ValueError(
                     'Logical Error: Something crazy happened.')
@@ -187,7 +189,7 @@ class VNEEnvironment(gym.Env):
             else:  # IsInstance of SuccessEvent
 
                 # Positive Reward
-                reward = self.reward_shape(event)
+                reward = self.reward_shape(allocation_result)
 
                 # We check if the VNR is fully embedded
                 if current_vnr.is_all_embedded():
@@ -199,7 +201,8 @@ class VNEEnvironment(gym.Env):
                     self.controller.evaluator.processed_vnrs += 1
 
                     # We give the agent a bonus for embedding the whole VNR
-                    reward += self.reward_shape(event, fully_emb=True)
+                    reward += self.reward_shape(allocation_result,
+                                                fully_emb=True)
 
             # Outside if-else block
             if self.controller.evaluator.is_all_vnrs_processed():

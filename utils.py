@@ -47,9 +47,9 @@ class FailureEvent(Event):
     def __init__(self, type: str, time: int, vnr: VirtualNetworkRequest, **kwargs):
         super().__init__(type, time, vnr, **kwargs)
         if type == 'Node_Failure':
-            vnode: VirtualNode = kwargs['vnode']
-            snode: SubstrateNode = kwargs['snode']
-            reason: str = kwargs['reason']
+            self.vnode: VirtualNode = kwargs['vnode']
+            self.snode: SubstrateNode = kwargs['snode']
+            self.reason: str = kwargs['reason']
             # reason is either 'cap' constraint violation OR 'already_emb' constraint violation (another node from the same vnr is there)
             self.event_log: str = f"Node Failure at time {self.time}, VNR(id:{self.vnr.id}), VNode(id:{vnode.id}, avl_cap:{vnode.available_capacity}, cap:{vnode.capacity}), SNode(id:{snode.id}, avl_cap:{snode.available_capacity}, cap:{snode.capacity}), Reason:'{reason}'\n"
 

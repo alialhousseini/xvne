@@ -6,7 +6,7 @@ from .VirtualNetwork import VirtualNetwork
 class VirtualNetworkRequest:
     '''
     A class for a virtual network request
-    
+
     Attributes:
         id (int): The unique id of the virtual network request
         virtual_network (VirtualNetwork): The virtual network
@@ -56,7 +56,7 @@ class VirtualNetworkRequest:
         return self.arrival_time
 
     def __str__(self) -> str:
-        return f"VirtualNetworkRequest(virtual_network={self.virtual_network}, lifetime={self.lifetime}, arrival_time={self.arrival_time})"
+        return f"VirtualNetworkRequest(virtual_network={self.virtual_network}, lifetime={self.lifetime}, arrival_time={self.arrival_time}, info={self.nodes_embedded_components})"
 
     def is_all_embedded(self) -> bool:
         for node in self.virtual_network.virtual_nodes:

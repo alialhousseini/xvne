@@ -54,14 +54,14 @@ def main():
     # controller
     c = Controller(sn, [vnr])
 
-    event1 = c.allocate_node(vnode1, snode1)
-    print(event1.event_log)
-    event2 = c.allocate_node(vnode2, snode2)
-    print(event2.event_log)
-    event3 = c.allocate_node(vnode3, snode4)
-    print(event3.event_log)
+    # event1 = c.allocate_node(vnode1, snode1)
+    # print(event1.event_log)
+    # event2 = c.allocate_node(vnode2, snode2)
+    # print(event2.event_log)
+    # event3 = c.allocate_node(vnode3, snode4)
+    # print(event3.event_log)
 
-    print(vnr.nodes_embedded_components)
+    # print(vnr.nodes_embedded_components)
     # event4 = c.rollback(vnr, reason='test')
     # print(event4.event_log)
     # c.substrate_network.to_json('sn.json')
