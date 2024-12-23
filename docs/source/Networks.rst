@@ -4,45 +4,14 @@ Networks package
 Submodules
 ----------
 
-Networks.SubstrateNetwork module
---------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: Networks.SubstrateNetwork
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Networks.VirtualNetwork module
-------------------------------
-
-.. automodule:: Networks.VirtualNetwork
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Networks.VirtualNetworkRequest module
--------------------------------------
-
-.. automodule:: Networks.VirtualNetworkRequest
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Networks.components module
---------------------------
-
-.. automodule:: Networks.components
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Networks.utils module
----------------------
-
-.. automodule:: Networks.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   Networks.SubstrateNetwork
+   Networks.VirtualNetwork
+   Networks.VirtualNetworkRequest
+   Networks.components
+   Networks.utils
 
 Module contents
 ---------------

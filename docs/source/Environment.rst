@@ -4,21 +4,11 @@ Environment package
 Submodules
 ----------
 
-Environment.env module
-----------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: Environment.env
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Environment.reward module
--------------------------
-
-.. automodule:: Environment.reward
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   Environment.env
+   Environment.reward
 
 Module contents
 ---------------

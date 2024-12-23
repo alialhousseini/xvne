@@ -4,37 +4,13 @@ Orchestrator package
 Submodules
 ----------
 
-Orchestrator.Controller module
-------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: Orchestrator.Controller
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Orchestrator.Evaluator module
------------------------------
-
-.. automodule:: Orchestrator.Evaluator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Orchestrator.Recorder module
-----------------------------
-
-.. automodule:: Orchestrator.Recorder
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Orchestrator.SimulationTime module
-----------------------------------
-
-.. automodule:: Orchestrator.SimulationTime
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   Orchestrator.Controller
+   Orchestrator.Evaluator
+   Orchestrator.Recorder
+   Orchestrator.SimulationTime
 
 Module contents
 ---------------
